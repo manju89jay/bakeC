@@ -1,0 +1,17 @@
+rules:
+  no_dynamic_memory:
+    patterns: ["malloc", "calloc", "realloc", "free("]
+    severity: "error"
+
+  no_stdio:
+    patterns: ["printf", "fprintf", "scanf", "puts("]
+    severity: "warning"
+    exceptions: ["SIMULATION_MODE"]
+
+  header_guards:
+    required: true
+    severity: "error"
+
+  traceability:
+    require_trace_tags: true
+    severity: "warning"

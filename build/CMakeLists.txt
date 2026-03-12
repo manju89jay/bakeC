@@ -1,0 +1,34 @@
+cmake_minimum_required(VERSION 3.16)
+project(bakec_generated C)
+
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
+if(NOT DEFINED PLATFORM)
+    set(PLATFORM "desktop")
+endif()
+
+if(PLATFORM STREQUAL "desktop")
+    set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/../generated/desktop")
+    add_compile_definitions(SIMULATION_MODE)
+elseif(PLATFORM STREQUAL "cortex_m4")
+    set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/../generated/cortex_m4")
+    include(cmake/toolchain_arm.cmake)
+    add_compile_definitions(EMBEDDED_TARGET)
+endif()
+
+add_library(controller STATIC
+    ${GENERATED_DIR}/mnarx_lung_controller.c
+    ${GENERATED_DIR}/mnarx_lung_controller_data.c
+)
+target_include_directories(controller PUBLIC ${GENERATED_DIR})
+
+if(PLATFORM STREQUAL "desktop")
+    enable_testing()
+
+    add_executable(test_basis_functions
+        ${CMAKE_SOURCE_DIR}/../tests/c/test_basis_functions.c
+    )
+    target_link_libraries(test_basis_functions controller m)
+    add_test(NAME basis_functions COMMAND test_basis_functions)
+endif()
