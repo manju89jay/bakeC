@@ -1,0 +1,50 @@
+schema_version: "1.0"
+
+model:
+  name: "pid_pressure"
+  description: >
+    PID pressure controller for hydraulic valve systems.
+    Demonstrates toolchain generality with a different
+    computational pattern than the mNARX model.
+  sample_time_s: 0.001
+
+  inputs:
+    - name: "setpoint"
+      description: "Desired pressure"
+      unit: "bar"
+      data_type: "real_T"
+    - name: "measured"
+      description: "Measured pressure"
+      unit: "bar"
+      data_type: "real_T"
+
+  outputs:
+    - name: "command"
+      description: "Valve command signal"
+      unit: "mA"
+      data_type: "real_T"
+
+  state:
+    - name: "integral"
+      description: "Integral accumulator"
+      data_type: "real_T"
+      initial_value: 0.0
+    - name: "prev_error"
+      description: "Previous error for derivative"
+      data_type: "real_T"
+      initial_value: 0.0
+
+  blocks:
+    - type: "pid"
+      name: "controller"
+      params:
+        Kp: 2.5
+        Ki: 0.8
+        Kd: 0.1
+        output_min: -1000.0
+        output_max: 1000.0
+        anti_windup: true
+
+  constraints:
+    no_dynamic_memory: true
+    misra_compliant: true

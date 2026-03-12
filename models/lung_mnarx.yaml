@@ -1,0 +1,84 @@
+schema_version: "1.0"
+
+model:
+  name: "mnarx_lung"
+  description: >
+    Modified Non-Linear Autoregressive (mNARX) lung mechanics model.
+    Predicts airway pressure from flow and volume measurements for
+    mechanically ventilated ARDS patients.
+    Reference: Jayaramaiah et al. (2016), J. Biomedical Science and
+    Engineering, 9, 107-115. DOI: 10.4236/jbise.2016.910B014
+  sample_time_s: 0.016
+
+  inputs:
+    - name: "flow"
+      description: "Airway flow rate (V̇)"
+      unit: "L/s"
+      data_type: "real_T"
+    - name: "volume"
+      description: "Inspired volume (V)"
+      unit: "L"
+      data_type: "real_T"
+
+  outputs:
+    - name: "Paw"
+      description: "Airway pressure"
+      unit: "mbar"
+      data_type: "real_T"
+
+  state:
+    - name: "Paw_prev"
+      description: "Previous airway pressure for autoregressive feedback"
+      data_type: "real_T"
+      initial_value: 0.0
+    - name: "P0"
+      description: "Offset pressure (PEEP)"
+      data_type: "real_T"
+      initial_value: 0.0
+
+  blocks:
+    - type: "basis_function_sum"
+      name: "elastance"
+      description: "Pressure-dependent elastance: Σ ai·Φi,d(Paw)·V(t)"
+      equation_ref: "Eq.5, first term (Jayaramaiah et al., 2016)"
+      params:
+        num_basis_functions: 5
+        basis_order: 1
+        coefficients: [0.0350, 0.0280, 0.0220, 0.0190, 0.0150]
+        knots: [0.0, 8.0, 16.0, 24.0, 32.0, 40.0]
+        input_signal: "volume"
+        basis_input: "Paw_prev"
+
+    - type: "basis_function_sum"
+      name: "resistance"
+      description: "Pressure-dependent resistance: Σ bj·Πj,d(Paw)·V̇(t)"
+      equation_ref: "Eq.5, second term (Jayaramaiah et al., 2016)"
+      params:
+        num_basis_functions: 20
+        basis_order: 1
+        coefficients: [
+          12.50, 11.80, 11.20, 10.70, 10.30,
+           9.95,  9.65,  9.40,  9.20,  9.05,
+           8.95,  8.88,  8.84,  8.82,  8.81,
+           8.82,  8.85,  8.90,  8.98,  9.10
+        ]
+        knots: [
+           0.0,  2.0,  4.0,  6.0,  8.0,
+          10.0, 12.0, 14.0, 16.0, 18.0,
+          20.0, 22.0, 24.0, 26.0, 28.0,
+          30.0, 32.0, 34.0, 36.0, 38.0,
+          40.0
+        ]
+        input_signal: "flow"
+        basis_input: "Paw_prev"
+
+    - type: "offset"
+      name: "pressure_offset"
+      description: "Offset pressure term: c·P0(t)"
+      params:
+        coefficient: 1.0
+        input_signal: "P0"
+
+  constraints:
+    no_dynamic_memory: true
+    misra_compliant: true

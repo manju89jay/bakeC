@@ -1,0 +1,23 @@
+platform:
+  name: "Desktop Simulation"
+  compiler: "gcc"
+
+  types:
+    real_T: "double"
+    int_T: "int32_t"
+
+  constraints:
+    dynamic_memory: false
+    printf_allowed: true
+    assertions: true
+    floating_point: "double"
+
+  compiler_flags:
+    - "-Wall"
+    - "-Wextra"
+    - "-Wpedantic"
+    - "-O2"
+    - "-std=c99"
+    - "-DSIMULATION_MODE"
+
+  type_suffix: ""

@@ -1,0 +1,52 @@
+/**
+ * @brief PID controller computation
+ *
+ * @trace {{ meta.model_path }} → blocks.{{ block.name }}
+ *
+ * @param setpoint  Desired value
+ * @param measured  Measured value
+ * @param dt        Sample time [s]
+ * @return          Controller output
+ */
+
+static real_T {{ block.name }}_integral = 0.0{{ type_suffix }};
+static real_T {{ block.name }}_prev_error = 0.0{{ type_suffix }};
+
+static real_T {{ block.name }}_compute(real_T setpoint, real_T measured, real_T dt)
+{
+    real_T error = setpoint - measured;
+
+    /* Proportional */
+    real_T p_term = {{ "%.4f" % block.params.Kp }}{{ type_suffix }} * error;
+
+    /* Integral with anti-windup */
+    {{ block.name }}_integral += error * dt;
+{% if block.params.anti_windup | default(false) %}
+    if ({{ block.name }}_integral > {{ "%.1f" % block.params.output_max }}{{ type_suffix }}) {
+        {{ block.name }}_integral = {{ "%.1f" % block.params.output_max }}{{ type_suffix }};
+    } else if ({{ block.name }}_integral < {{ "%.1f" % block.params.output_min }}{{ type_suffix }}) {
+        {{ block.name }}_integral = {{ "%.1f" % block.params.output_min }}{{ type_suffix }};
+    }
+{% endif %}
+    real_T i_term = {{ "%.4f" % block.params.Ki }}{{ type_suffix }} * {{ block.name }}_integral;
+
+    /* Derivative */
+    real_T d_term = 0.0{{ type_suffix }};
+    if (dt > 0.0{{ type_suffix }}) {
+        d_term = {{ "%.4f" % block.params.Kd }}{{ type_suffix }} * (error - {{ block.name }}_prev_error) / dt;
+    }
+    {{ block.name }}_prev_error = error;
+
+    /* Sum and saturate */
+    real_T output = p_term + i_term + d_term;
+
+{% if block.params.output_max is defined %}
+    if (output > {{ "%.1f" % block.params.output_max }}{{ type_suffix }}) {
+        output = {{ "%.1f" % block.params.output_max }}{{ type_suffix }};
+    } else if (output < {{ "%.1f" % block.params.output_min }}{{ type_suffix }}) {
+        output = {{ "%.1f" % block.params.output_min }}{{ type_suffix }};
+    }
+{% endif %}
+
+    return output;
+}

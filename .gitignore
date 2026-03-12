@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/out/
+.pytest_cache/
+*.so
+*.o
+*.a
+*.exe
+.claude/
+CLAUDE.md

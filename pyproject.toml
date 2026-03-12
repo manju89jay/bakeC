@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bakeC"
+version = "0.1.0"
+description = "Raw models in, baked C code out."
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Manjunath Jayaramaiah", email = "manjunath.jayaramaiah@gmail.com"}
+]
+
+dependencies = [
+    "jinja2>=3.1.0",
+    "pyyaml>=6.0",
+    "jsonschema>=4.17.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+bakec = "bakec.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

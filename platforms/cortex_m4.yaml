@@ -1,0 +1,25 @@
+platform:
+  name: "ARM Cortex-M4"
+  compiler: "arm-none-eabi-gcc"
+
+  types:
+    real_T: "float"
+    int_T: "int32_t"
+
+  constraints:
+    dynamic_memory: false
+    printf_allowed: false
+    assertions: false
+    floating_point: "single"
+
+  compiler_flags:
+    - "-mcpu=cortex-m4"
+    - "-mfpu=fpv4-sp-d16"
+    - "-mfloat-abi=hard"
+    - "-Wall"
+    - "-Wextra"
+    - "-Os"
+    - "-std=c99"
+    - "-DEMBEDDED_TARGET"
+
+  type_suffix: "f"

@@ -1,0 +1,70 @@
+/**
+ * @brief First-order basis function for {{ block.name }}
+ *
+ * Implements B-spline basis function Φ_i,1(P) as defined in
+ * Jayaramaiah et al. (2016), Equations 6-7.
+ *
+ * @trace {{ meta.model_path }} → blocks.{{ block.name }}
+ * @trace {{ block.equation_ref }}
+ *
+ * @param P     Current pressure value
+ * @param i     Basis function index (0..N-1)
+ * @param knots Knot vector (length N+1)
+ * @param N     Number of basis functions
+ * @return      Basis function value in [0.0, 1.0]
+ */
+static real_T {{ block.name }}_phi(real_T P, int32_T i,
+    const real_T *knots, int32_T N)
+{
+    real_T P_i   = knots[i];
+    real_T P_ip1 = knots[i + 1];
+
+{% if block.params.basis_order == 0 %}
+    /* Zeroth order: piecewise constant (Eq. 6) */
+    if ((P >= P_i) && (P <= P_ip1)) {
+        return 1.0{{ type_suffix }};
+    }
+    return 0.0{{ type_suffix }};
+{% else %}
+    /* First order: piecewise linear (Eq. 7) */
+    real_T P_ip2;
+
+    if (i + 2 <= N) {
+        P_ip2 = knots[i + 2];
+    } else {
+        P_ip2 = knots[N];
+    }
+
+    if (i == 0) {
+        /* Boundary basis: descending ramp from 1.0 at P_i to 0.0 at P_ip1 */
+        if ((P < P_i) || (P > P_ip1)) {
+            return 0.0{{ type_suffix }};
+        }
+        {
+            real_T denom = P_ip1 - P_i;
+            if (denom < 1.0e-10{{ type_suffix }}) {
+                return 0.0{{ type_suffix }};
+            }
+            return (P_ip1 - P) / denom;
+        }
+    }
+
+    if ((P < P_i) || (P > P_ip2)) {
+        return 0.0{{ type_suffix }};
+    }
+
+    if (P <= P_ip1) {
+        real_T denom = P_ip1 - P_i;
+        if (denom < 1.0e-10{{ type_suffix }}) {
+            return 0.0{{ type_suffix }};
+        }
+        return (P - P_i) / denom;
+    } else {
+        real_T denom = P_ip2 - P_ip1;
+        if (denom < 1.0e-10{{ type_suffix }}) {
+            return 0.0{{ type_suffix }};
+        }
+        return (P_ip2 - P) / denom;
+    }
+{% endif %}
+}
