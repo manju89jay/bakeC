@@ -1,101 +1,121 @@
 # Architecture
 
-## The Embedded Coder Pipeline
+bakeC mirrors the MATLAB Embedded Coder pipeline — YAML models in, validated
+embedded C out — with a two-pipeline architecture: **Generate** (model to code)
+and **Validate** (code to evidence).
 
-MATLAB Embedded Coder uses a 5-stage pipeline to turn Simulink models into production C:
-
-1. **Simulink Model** — graphical block diagram with typed signals and parameters
-2. **`.rtw` file** — Real-Time Workshop intermediate representation: a flat text dump of every block, signal, parameter, data type, and sample time in the model
-3. **TLC templates** — Target Language Compiler files that walk the `.rtw` data and emit C code. Separated into system-level (top-level lifecycle) and block-level (per-algorithm) templates
-4. **Generated C** — struct-based I/O, `init`/`step`/`terminate` lifecycle, static allocation, MISRA-compatible
-5. **Build** — makefile or IDE project targeting a specific MCU toolchain
-
-The key architectural insight is **separation of data extraction from code emission**. The `.rtw` file captures *what* the model computes; TLC templates decide *how* to express that in C for a given target. Changing the target (desktop vs. Cortex-M4) changes templates and compiler flags, not the model.
-
-## This Project's Architecture
-
-bakeC reproduces this pattern with modern tooling:
+## System Context (C4 Level 1)
 
 ```
- YAML Model          Platform YAML
- (lung_mnarx.yaml)   (cortex_m4.yaml)
-       │                    │
-       ▼                    ▼
- ┌──────────┐        ┌───────────┐
- │  Parser  │        │  Parser   │
- └────┬─────┘        └─────┬─────┘
-      │  Python dict (IR)   │
-      ▼                     ▼
- ┌─────────────────────────────────┐
- │        Validator                │
- └──────────────┬──────────────────┘
-                ▼
- ┌─────────────────────────────────┐
- │     CodegenEngine (Jinja2)      │
- │  ┌───────────────────────────┐  │
- │  │ controller.c.j2           │  │
- │  │ controller.h.j2           │  │
- │  │ controller_data.c.j2      │  │
- │  │ controller_types.h.j2     │  │
- │  │ blocks/basis_function.c.j2│  │
- │  │ blocks/pid.c.j2           │  │
- │  └───────────────────────────┘  │
- └──────────────┬──────────────────┘
-                ▼
- ┌─────────────────────────────────┐
- │     Writer → generated/*.c/.h   │
- └──────────────┬──────────────────┘
-                ▼
- ┌─────────────────────────────────┐
- │   CMake build (per platform)    │
- └─────────────────────────────────┘
+  ┌──────────────┐     ┌──────────────┐
+  │  Model YAML  │     │ Platform YAML│
+  │  (lung_mnarx │     │ (cortex_m4   │
+  │   pid_ctrl)  │     │  desktop)    │
+  └──────┬───────┘     └──────┬───────┘
+         │                    │
+         ▼                    ▼
+  ┌─────────────────────────────────────┐
+  │             bakeC CLI               │
+  │                                     │
+  │   generate        validate          │
+  │   ────────        ────────          │
+  │   YAML → C        C → report       │
+  └──────────┬─────────────┬────────────┘
+             │             │
+             ▼             ▼
+  ┌──────────────┐  ┌──────────────────┐
+  │ Generated C  │  │ Validation Report│
+  │ (.c, .h)     │  │ (MISRA, trace,   │
+  │              │  │  safety, regress) │
+  └──────────────┘  └──────────────────┘
 ```
 
-The Python dict returned by the parser is the equivalent of the `.rtw` file — a normalized, validated representation of the model that templates consume without needing to re-parse YAML.
+## Container View (C4 Level 2)
 
-## TLC ↔ Jinja2 Mapping
+### Generate Pipeline
 
-| TLC Construct | Jinja2 Equivalent | Notes |
-|---|---|---|
-| `%assign var = value` | `{% set var = value %}` | Variable binding |
-| `%foreach idx = count` | `{% for idx in range(count) %}` | Iteration |
-| `%if condition` | `{% if condition %}` | Conditional emission |
-| `%<variable>` | `{{ variable }}` | Value interpolation |
-| `%openfile "out.c"` | `engine.py` output routing | Engine maps template → output filename |
-| Block-level `.tlc` | `blocks/*.c.j2` | Per-block-type template fragments |
-| System-level `.tlc` | `controller.c.j2` | Top-level lifecycle template |
-| `system_target_file` | `platforms/*.yaml` | Target hardware configuration |
-| `%include "block.tlc"` | `{% include "blocks/block.c.j2" %}` | Template composition |
+```
+  YAML Model ──► Parser ──► Python dict (IR) ──► Validator
+                                                     │
+  Platform YAML ──► Parser ──► Platform dict ────────┤
+                                                     ▼
+                                              CodegenEngine
+                                              (Jinja2 templates)
+                                                     │
+                                                     ▼
+                                                  Writer
+                                                     │
+                                                     ▼
+                                           generated/*.c, *.h
+```
 
-## Why This Architecture Scales
+The Parser converts YAML to Python dicts (equivalent of MATLAB's `.rtw`
+intermediate representation). The Validator checks semantic constraints
+(coefficient counts, knot ordering, sample rates). The CodegenEngine feeds
+the validated IR into Jinja2 templates — one template per output file, with
+block-level fragments in `templates/blocks/`. The Writer emits files to disk.
 
-The engine is model-agnostic. Extension happens at three points without modifying generator code:
+**Key files:**
+[parser.py](../src/bakec/parser.py),
+[validator.py](../src/bakec/validator.py),
+[engine.py](../src/bakec/engine.py),
+[writer.py](../src/bakec/writer.py)
 
-**New model** — add a YAML file under `models/`. The parser validates it against the same schema. The engine feeds it to the same templates. If the model uses only existing block types, zero code changes are needed.
+### Validate Pipeline
 
-**New platform** — add a YAML file under `platforms/` and a CMake toolchain file under `build/`. The platform config controls type mappings (`real_T` → `float` vs `double`), literal suffixes, compiler flags, and constraint toggles (assertions, printf). Templates already parameterize on these.
+```
+  generated/*.c, *.h ──► File Reader ──► Per-file checks:
+                              │            ├─ MISRA C:2012 (10 rules)
+                              │            ├─ Traceability (5 checks)
+                              │            └─ Safety patterns (6 checks)
+                              │
+                              ├──────────► Baseline comparison (if provided):
+                              │            ├─ Regression (9 checks)
+                              │            └─ API stability (6 checks)
+                              │
+                              ▼
+                         CheckReport
+                         (errors, warnings, info)
+```
 
-**New block type** — add a template under `templates/blocks/`, a corresponding `{% elif %}` in `controller.c.j2`, and validation logic in `validator.py`. The engine's rendering loop handles it automatically.
+The validate pipeline operates on generated C files, not on YAML models. Each
+check module is a pure function: `(content, filename) -> list[CheckResult]`.
+Regression and API stability checks compare two directories (target vs
+baseline) to detect unintended structural changes.
 
-## Automotive Mapping
+**Key files:**
+[runner.py](../src/bakec/checks/runner.py),
+[misra.py](../src/bakec/checks/misra.py),
+[traceability.py](../src/bakec/checks/traceability.py),
+[safety.py](../src/bakec/checks/safety.py),
+[regression.py](../src/bakec/checks/regression.py),
+[api_stability.py](../src/bakec/checks/api_stability.py)
 
-| bakeC Concept | AUTOSAR Equivalent |
-|---|---|
-| Model YAML | ARXML application description |
-| Platform config | ECU extract / target configuration |
-| Generated `_controller.c` | Software Component (SWC) implementation |
-| `_ExtU_T` / `_ExtY_T` structs | Rte port interfaces (sender-receiver) |
-| `_initialize` / `_step` / `_terminate` | Runnable entities with periodic/init triggers |
-| `_controller_data.c` | ASAP2/A2L calibration parameter file |
-| Quality rules (MISRA subset) | MISRA C:2012 compliance (ISO 26262 Part 6) |
-| `@trace` tags + sha256 hashes | Requirements traceability (DOORS → code) |
+## Extension Points
 
-## Safety Context
+**New model** — add a YAML file under `models/`. If it uses existing block
+types, zero code changes are needed.
 
-bakeC targets IEC 61508 (functional safety for E/E/PE systems) and its domain-specific derivatives: IEC 62304 for medical device software and ISO 26262 for automotive. These standards require that code generation tools either be qualified (IEC 61508 T3) or that their output be independently verified.
+**New platform** — add a YAML file under `platforms/` and a CMake toolchain
+file. Platform config controls type mappings, literal suffixes, compiler flags.
 
-The traceability infrastructure — `@trace` tags linking every generated function back to its YAML source path, sha256 content hashes in file banners, and the quality checker — provides the evidence chain that safety assessors require. Each generated file can be independently verified against its model source.
+**New block type** — add a template in `templates/blocks/`, extend the
+`{% elif %}` dispatch in `controller.c.j2`, and add validation logic.
 
-Generated code follows MISRA C:2012 guidelines: no dynamic memory allocation, no recursion, C99-compliant declarations, `static` internal linkage for helper functions, and explicit type widths via `stdint.h` typedefs. The `quality/check_generated.py` script enforces a subset of these rules automatically.
+**New check** — add a module in `src/bakec/checks/`, register it in
+`runner.py`'s orchestrator, and add a section to `rules.yaml`.
 
-The separation of calibration data (`_data.c`) from algorithm code (`_controller.c`) supports the common automotive workflow where parameters are tuned on-target without recompiling the algorithm — analogous to ASAP2/XCP calibration in production ECU software.
+## Design Decisions
+
+- [ADR-001: Template Engine](decisions/001-template-engine.md) — Jinja2 over string concatenation or Mako
+- [ADR-002: YAML Models](decisions/002-yaml-models.md) — YAML over JSON or TOML for model definitions
+- [ADR-003: Static Allocation](decisions/003-static-allocation.md) — no malloc/free in generated code
+- [ADR-004: Type Abstraction](decisions/004-type-abstraction.md) — portable typedefs per platform
+- [ADR-005: Basis Function Unrolling](decisions/005-basis-function-unrolling.md) — N<=8 unrolled, N>8 loop
+- [ADR-006: Traceability](decisions/006-traceability.md) — provenance banners and @trace tags
+
+## Related Documentation
+
+- [TLC to Jinja2 Mapping](tlc-mapping.md) — detailed construct-level mapping with examples
+- [Automotive Mapping](automotive-mapping.md) — AUTOSAR concept equivalences
+- [Safety Context](safety-context.md) — IEC 61508, IEC 62061, ISO 13849-1, MISRA C:2012

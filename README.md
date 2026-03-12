@@ -1,93 +1,125 @@
 # bakeC
 
-Raw YAML model definitions in, production-quality embedded C code out.
+A study of how MATLAB Embedded Coder's code generation architecture translates
+to modern open-source tooling -- YAML models, Jinja2 templates, and a Python
+orchestration layer that generates production-quality embedded C with
+traceability, MISRA compliance checking, and multi-platform support.
 
-bakeC is a template-based code generation toolchain that mirrors the [MATLAB Embedded Coder](https://www.mathworks.com/products/embedded-coder.html) / TLC pipeline using modern open-source tools: YAML for model definitions, Jinja2 for templates, and Python for orchestration.
+## What It Does
+
+bakeC takes a YAML model definition and a platform configuration, and produces
+four C files per model: public API header, algorithm implementation, calibration
+data, and platform-specific type definitions. It then validates the generated
+output against 36 automated checks spanning MISRA C:2012, traceability,
+embedded safety patterns, regression detection, and API stability.
+
+```
+$ python -m bakec.cli validate --target generated/desktop/
+
+bakeC v0.1.0
+
+Target:    generated/desktop/
+
+Running checks...
+
+  ! [MISRA-15.7] pid_pressure_controller.c:33 -- if/else-if ...
+  ! [MISRA-15.7] pid_pressure_controller.c:50 -- if/else-if ...
+
+  2 warning(s)
+```
 
 ## Quick Start
 
 ```bash
 pip install -e ".[dev]"
 
-# Generate C code for the mNARX lung model targeting desktop
+# Generate code
 python -m bakec.cli generate \
   --model models/lung_mnarx.yaml \
   --platform platforms/desktop.yaml \
   --output generated/desktop/
 
-# Generate for ARM Cortex-M4 (float instead of double)
-python -m bakec.cli generate \
-  --model models/lung_mnarx.yaml \
-  --platform platforms/cortex_m4.yaml \
-  --output generated/cortex_m4/
-```
+# Validate generated output
+python -m bakec.cli validate --target generated/desktop/
 
-## What Gets Generated
-
-Each model + platform combination produces four files:
-
-| File | Purpose |
-|---|---|
-| `{name}_controller.h` | Public API: I/O structs, lifecycle function prototypes |
-| `{name}_controller.c` | Algorithm: init/step/terminate with block implementations |
-| `{name}_controller_data.c` | Calibration data: coefficients, knot vectors (replaceable independently) |
-| `{name}_controller_types.h` | Platform-specific type definitions (real_T, int32_T, etc.) |
-
-Generated code follows MATLAB Embedded Coder conventions: struct-based I/O, static allocation only (no malloc), `@trace` tags linking every function back to the source YAML, and sha256 content hashes for traceability.
-
-## Project Structure
-
-```
-src/bakec/          Python package (parser, validator, engine, writer, cli)
-models/             YAML model definitions
-templates/          Jinja2 templates (mirrors TLC file structure)
-  blocks/           Per-block-type template fragments
-platforms/          Target platform configurations
-generated/          Output directory (committed for review)
-tests/              Python and C tests
-quality/            Generated code quality checks
-build/              CMake build for compiling generated C
-```
-
-## Models
-
-- **mNARX Lung** (`models/lung_mnarx.yaml`) — Modified nonlinear autoregressive lung mechanics model with B-spline basis functions. See [docs/model_background.md](docs/model_background.md).
-- **PID Controller** (`models/pid_controller.yaml`) — PID pressure controller for hydraulic valve systems. Demonstrates toolchain generality with a different computational pattern.
-
-## Platforms
-
-- **Desktop** (`platforms/desktop.yaml`) — GCC, `double` precision, assertions enabled, `-O2`
-- **ARM Cortex-M4** (`platforms/cortex_m4.yaml`) — `arm-none-eabi-gcc`, `float` precision, no printf, `-Os`
-
-## Development
-
-```bash
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run Python tests
+# Run tests
 python -m pytest tests/ -v
-
-# Run quality checks on generated code
-python quality/check_generated.py generated/
-
-# Build and test generated C (requires CMake + GCC)
-cmake -B build/out -S build -DPLATFORM=desktop
-cmake --build build/out
-ctest --test-dir build/out --output-on-failure
 ```
 
 ## Architecture
 
-bakeC follows the same separation-of-concerns as MATLAB Embedded Coder:
+bakeC reproduces the MATLAB Embedded Coder pipeline with two command paths:
 
-1. **Parser** — reads YAML, produces a Python dict intermediate representation (equivalent of `.rtw`)
-2. **Validator** — semantic checks on the IR (sample times, coefficient counts, knot ordering)
-3. **Engine** — feeds the IR into Jinja2 templates (equivalent of TLC) to emit C code
-4. **Writer** — writes rendered files to disk with line counts
-5. **CLI** — orchestrates the pipeline with progress output
+**Generate:** YAML model + platform -> Parser -> Validator -> Jinja2 engine -> C files
+**Validate:** C files [+ baseline] -> MISRA + traceability + safety + regression checks -> report
 
-See [docs/architecture.md](docs/architecture.md) for the full architectural mapping between TLC and Jinja2, and how the design maps to AUTOSAR concepts.
+```
+src/bakec/
+  parser.py          YAML -> Python dict (equivalent of .rtw)
+  validator.py       Semantic checks on model IR
+  engine.py          Jinja2 template rendering
+  writer.py          File output with metadata
+  cli.py             CLI with generate and validate subcommands
+  checks/
+    runner.py        Check orchestrator (CheckResult, CheckReport)
+    misra.py         10 MISRA C:2012 rules
+    traceability.py  5 provenance/trace checks
+    safety.py        6 embedded safety patterns
+    regression.py    9 structural comparison checks
+    api_stability.py 6 API contract checks
+    rules.yaml       Check configuration
+```
+
+## Models
+
+- **mNARX Lung** (`models/lung_mnarx.yaml`) -- Modified nonlinear autoregressive
+  lung mechanics model with pressure-dependent B-spline basis functions.
+  See [model background](docs/model_background.md).
+- **PID Controller** (`models/pid_controller.yaml`) -- PID pressure controller
+  for hydraulic valve systems.
+
+## Platforms
+
+- **Desktop** (`platforms/desktop.yaml`) -- GCC, `double` precision, assertions, `-O2`
+- **ARM Cortex-M4** (`platforms/cortex_m4.yaml`) -- `arm-none-eabi-gcc`, `float` precision, `-Os`
+
+## Generated Output
+
+Each model + platform produces four files:
+
+| File | Purpose |
+|---|---|
+| `{name}_controller.h` | Public API: I/O structs, lifecycle prototypes |
+| `{name}_controller.c` | Algorithm: init/step/terminate |
+| `{name}_controller_data.c` | Calibration data (independently replaceable) |
+| `{name}_controller_types.h` | Platform-specific typedefs |
+
+## Validation Checks
+
+| Category | Count | Scope |
+|---|---|---|
+| MISRA C:2012 | 10 | Per-file static analysis |
+| Traceability | 5 | Provenance, @trace tags, hashes |
+| Safety | 6 | Static allocation, bounded loops, typed vars |
+| Regression | 9 | Baseline structural comparison |
+| API stability | 6 | Header contract verification |
+
+## Documentation
+
+- [Architecture](docs/architecture.md) -- system design with C4 diagrams
+- [TLC Mapping](docs/tlc-mapping.md) -- MATLAB TLC to Jinja2 equivalences
+- [Automotive Mapping](docs/automotive-mapping.md) -- AUTOSAR concept parallels
+- [Safety Context](docs/safety-context.md) -- IEC 61508, ISO 13849-1, MISRA
+- [Model Background](docs/model_background.md) -- mNARX lung mechanics
+- [Architecture Decision Records](docs/decisions/) -- 6 ADRs
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+python -m pytest tests/ -v
+make all    # generate + build + test + quality + validate
+```
 
 ## License
 
