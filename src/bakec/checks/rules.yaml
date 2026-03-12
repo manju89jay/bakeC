@@ -1,0 +1,55 @@
+# bakeC validation rules configuration
+#
+# Each section can be disabled entirely with "enabled: false".
+# Individual MISRA rules can be toggled and have severity overridden.
+
+misra:
+  enabled: true
+  rules:
+    MISRA-21.3:
+      enabled: true
+      severity: error
+    MISRA-17.2:
+      enabled: true
+      severity: error
+    MISRA-8.1:
+      enabled: true
+      severity: warning
+    MISRA-10.1:
+      enabled: true
+      severity: warning
+    MISRA-15.7:
+      enabled: true
+      severity: warning
+    MISRA-2.7:
+      enabled: true
+      severity: info
+    MISRA-8.4:
+      enabled: true
+      severity: warning
+    MISRA-14.2:
+      enabled: true
+      severity: warning
+    MISRA-21.6:
+      enabled: true
+      severity: warning
+      exceptions:
+        - SIMULATION_MODE
+    MISRA-8.13:
+      enabled: true
+      severity: info
+
+traceability:
+  enabled: true
+
+safety:
+  enabled: true
+  allow_function_pointers: false
+  allow_vla: false
+
+regression:
+  enabled: true
+  line_count_threshold: 0.20
+
+api_stability:
+  enabled: true

@@ -11,3 +11,4 @@ build/cmake/
 *.exe
 .claude/
 CLAUDE.md
+HANDOVER.md

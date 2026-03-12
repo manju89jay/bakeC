@@ -1,9 +1,9 @@
-.PHONY: all generate build test quality clean install
+.PHONY: all generate build test quality validate clean install
 
 PYTHON := python3
 GENERATOR := $(PYTHON) -m bakec.cli
 
-all: generate build test quality
+all: generate build test quality validate
 
 install:
 	pip install -e ".[dev]"
@@ -33,6 +33,10 @@ test-c:
 
 quality:
 	$(PYTHON) quality/check_generated.py generated/
+
+validate:
+	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml
+	$(GENERATOR) validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml
 
 clean:
 	rm -rf build/out generated/desktop generated/cortex_m4 __pycache__
