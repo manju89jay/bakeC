@@ -4,10 +4,17 @@
 
 The mNARX (modified Non-Linear Autoregressive) lung mechanics model predicts
 airway pressure from flow and volume measurements in mechanically ventilated
-ARDS patients. It was published by Jayaramaiah, M., Laufer, B., Kretschmer, J.
-and Moller, K. (2016), "A New Lung Mechanics Model and Its Evaluation with
-Clinical Data", *Journal of Biomedical Science and Engineering*, 9, 107-115
-(DOI: 10.4236/jbise.2016.910B014).
+ARDS patients. I developed this model during my master thesis and published it as:
+
+> Jayaramaiah, M., Laufer, B., Kretschmer, J. and Moller, K. (2016),
+> "A New Lung Mechanics Model and Its Evaluation with Clinical Data",
+> *Journal of Biomedical Science and Engineering*, 9, 107-115.
+> [Paper](https://www.scirp.org/journal/paperinformation?paperid=70763) |
+> DOI: [10.4236/jbise.2016.910B014](https://doi.org/10.4236/jbise.2016.910B014)
+
+Using my own published model rather than a textbook example means I understand
+every coefficient, every design trade-off, and the clinical context behind the
+math -- not just the code generation wrapper around it.
 
 ### Core Equation
 

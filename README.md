@@ -74,7 +74,10 @@ src/bakec/
 
 - **mNARX Lung** (`models/lung_mnarx.yaml`) -- Modified nonlinear autoregressive
   lung mechanics model with pressure-dependent B-spline basis functions.
-  See [model background](docs/model_background.md).
+  Based on [Jayaramaiah et al. (2016)](https://www.scirp.org/journal/paperinformation?paperid=70763),
+  developed during my master thesis. Using a model I built and published
+  myself means I understand every coefficient and design trade-off, not just
+  the code generation around it. See [model background](docs/model_background.md).
 - **PID Controller** (`models/pid_controller.yaml`) -- PID pressure controller
   for hydraulic valve systems.
 
