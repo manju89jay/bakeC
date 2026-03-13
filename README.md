@@ -24,16 +24,16 @@ Target:    generated/desktop/
 
 Running checks...
 
-  ! [MISRA-15.7] pid_pressure_controller.c:33 -- if/else-if ...
-  ! [MISRA-15.7] pid_pressure_controller.c:50 -- if/else-if ...
-
-  2 warning(s)
+  OK -- All checks passed
 ```
 
 ## Prerequisites
 
 - Python 3.10+
-- GCC and CMake (optional -- only needed to compile the generated C code)
+
+For compiling and testing the generated C code (optional):
+- Linux/macOS: GCC and CMake (pre-installed on most systems)
+- Windows: [MSYS2](https://www.msys2.org/) with MinGW-w64 GCC (`pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake`)
 
 ## Quick Start
 
@@ -128,9 +128,19 @@ Each model + platform produces four files:
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest tests/ -v
-make all    # generate + build + test + validate
+
+# Python tests (113 tests, 76% coverage)
+python -m pytest tests/ -v --cov=bakec
+
+# Full pipeline: generate all targets, compile desktop C, run all tests, validate
+make all
 ```
+
+The `make all` target runs: `generate` → `build` (desktop GCC) → `test` (Python + C) → `validate` (36 checks).
+
+Cross-compilation targets (cortex_m4, aurix_tc397) are generated and validated but not
+compiled — cross-compilers are not required. This matches the industry pattern where CI
+validates generated code quality; firmware compilation happens in the target build system.
 
 ## License
 
