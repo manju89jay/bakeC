@@ -30,6 +30,11 @@ Running checks...
   2 warning(s)
 ```
 
+## Prerequisites
+
+- Python 3.10+
+- GCC and CMake (optional -- only needed to compile the generated C code)
+
 ## Quick Start
 
 ```bash
@@ -117,6 +122,7 @@ Each model + platform produces four files:
 - [Safety Context](docs/safety-context.md) -- IEC 61508, ISO 13849-1, MISRA
 - [Model Background](docs/model_background.md) -- mNARX lung mechanics
 - [Architecture Decision Records](docs/decisions/) -- 6 ADRs
+- [Adding a Model](docs/adding-a-model.md) -- step-by-step guide
 
 ## Development
 
