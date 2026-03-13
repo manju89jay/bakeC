@@ -33,6 +33,9 @@ jobs:
           python -m bakec.cli generate --model models/lung_mnarx.yaml --platform platforms/aurix_tc397.yaml --output generated/aurix_tc397/
           python -m bakec.cli generate --model models/pid_controller.yaml --platform platforms/aurix_tc397.yaml --output generated/aurix_tc397/
 
+      - name: Verify generated code matches committed
+        run: git diff --exit-code generated/
+
       - name: Validate generated code
         run: |
           python -m bakec.cli validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
