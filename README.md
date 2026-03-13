@@ -1,5 +1,7 @@
 # bakeC
 
+![CI](https://github.com/manju89jay/bakeC/actions/workflows/ci.yml/badge.svg)
+
 A study of how MATLAB Embedded Coder's code generation architecture translates
 to modern open-source tooling -- YAML models, Jinja2 templates, and a Python
 orchestration layer that generates production-quality embedded C with

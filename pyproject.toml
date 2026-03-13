@@ -33,3 +33,9 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["bakec"]
+
+[tool.coverage.report]
+fail_under = 75

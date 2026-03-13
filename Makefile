@@ -32,7 +32,7 @@ build:
 test: test-python test-c
 
 test-python:
-	$(PYTHON) -m pytest tests/ -v --tb=short
+	$(PYTHON) -m pytest tests/ -v --tb=short --cov=bakec --cov-report=term-missing
 
 test-c:
 	@if [ -d "build/out" ]; then ctest --test-dir build/out --output-on-failure; fi
