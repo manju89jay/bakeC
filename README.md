@@ -121,7 +121,7 @@ Each model + platform produces four files:
 ```bash
 pip install -e ".[dev]"
 python -m pytest tests/ -v
-make all    # generate + build + test + quality + validate
+make all    # generate + build + test + validate
 ```
 
 ## License

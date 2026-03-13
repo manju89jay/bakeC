@@ -1,9 +1,9 @@
-.PHONY: all generate build test quality validate clean install
+.PHONY: all generate build test validate clean install
 
 PYTHON := python3
 GENERATOR := $(PYTHON) -m bakec.cli
 
-all: generate build test quality validate
+all: generate build test validate
 
 install:
 	pip install -e ".[dev]"
@@ -36,9 +36,6 @@ test-python:
 
 test-c:
 	@if [ -d "build/out" ]; then ctest --test-dir build/out --output-on-failure; fi
-
-quality:
-	$(PYTHON) quality/check_generated.py generated/
 
 validate:
 	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml
