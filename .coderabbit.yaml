@@ -1,0 +1,34 @@
+language: en-US
+
+reviews:
+  profile: assertive
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_instructions:
+    - path: "src/bakec/**"
+      instructions: >
+        Review Python code for type hints, proper logging (no print except cli.py),
+        and adherence to the MATLAB Embedded Coder pipeline architecture.
+
+    - path: "generated/**"
+      instructions: >
+        Generated C code — check for MISRA C:2012 patterns, static allocation only,
+        no dynamic memory, correct traceability banners, and platform-appropriate
+        type usage (float for embedded, double for desktop).
+
+    - path: "templates/**"
+      instructions: >
+        Jinja2 templates that produce C code. Verify generated output will be
+        MISRA-compliant, use platform typedefs (real_T, int_T), and include
+        traceability tags.
+
+    - path: "tests/**"
+      instructions: >
+        Verify tests cover edge cases, use proper assertions, and follow
+        existing test patterns in the project.
+
+chat:
+  auto_reply: true
