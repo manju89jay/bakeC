@@ -26,6 +26,8 @@ static real_T {{ block.name }}_compute(real_T setpoint, real_T measured, real_T 
         {{ block.name }}_integral = {{ "%.1f" % block.params.output_max }}{{ type_suffix }};
     } else if ({{ block.name }}_integral < {{ "%.1f" % block.params.output_min }}{{ type_suffix }}) {
         {{ block.name }}_integral = {{ "%.1f" % block.params.output_min }}{{ type_suffix }};
+    } else {
+        /* within limits */
     }
 {% endif %}
     real_T i_term = {{ "%.4f" % block.params.Ki }}{{ type_suffix }} * {{ block.name }}_integral;
@@ -45,6 +47,8 @@ static real_T {{ block.name }}_compute(real_T setpoint, real_T measured, real_T 
         output = {{ "%.1f" % block.params.output_max }}{{ type_suffix }};
     } else if (output < {{ "%.1f" % block.params.output_min }}{{ type_suffix }}) {
         output = {{ "%.1f" % block.params.output_min }}{{ type_suffix }};
+    } else {
+        /* within limits */
     }
 {% endif %}
 

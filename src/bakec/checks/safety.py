@@ -172,26 +172,24 @@ def check_no_vla(content: str, filename: str) -> list[CheckResult]:
     """SAFE-006: No variable-length arrays."""
     results = []
     stripped = _strip_comments(content)
-    # Match array declarations where size is a variable (not literal or #define)
-    # Pattern: type name[variable] where variable is not a number or UPPER_CASE macro
+    # Match type name[variable] where size is a lowercase identifier (not a
+    # numeric literal or UPPER_CASE macro).  The type keyword is part of the
+    # pattern so we only match declarations, not array indexing like arr[i].
     vla_pattern = re.compile(
-        r'\b\w+\s+(\w+)\s*\[\s*([a-z]\w*)\s*\]',
+        r'\b(?:real_T|int32_T|uint32_T|int16_T|uint16_T|int8_T|uint8_T|'
+        r'int|float|double|char)\s+(\w+)\s*\[\s*([a-z]\w*)\s*\]',
     )
     for m in vla_pattern.finditer(stripped):
         var_name = m.group(1)
         size_expr = m.group(2)
-        # Skip if it looks like array indexing rather than declaration
-        # Check context: should be preceded by a type
-        pre = stripped[max(0, m.start() - 50):m.start()]
-        if re.search(r'\b(?:real_T|int32_T|uint32_T|int16_T|uint16_T|int8_T|uint8_T|int|float|double|char)\s*$', pre):
-            results.append(CheckResult(
-                file=filename,
-                line=_find_line(stripped, m.start()),
-                severity="warning",
-                check_id="SAFE-006",
-                message=f"Possible variable-length array '{var_name}[{size_expr}]'",
-                suggestion="Use compile-time constant for array size",
-            ))
+        results.append(CheckResult(
+            file=filename,
+            line=_find_line(stripped, m.start()),
+            severity="warning",
+            check_id="SAFE-006",
+            message=f"Possible variable-length array '{var_name}[{size_expr}]'",
+            suggestion="Use compile-time constant for array size",
+        ))
     return results
 
 

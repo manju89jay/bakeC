@@ -124,10 +124,25 @@ def test_no_vla_clean():
     assert check_no_vla(code, "test.c") == []
 
 
+def test_no_vla_clean_uppercase_macro():
+    code = "int32_T buf[MAX_SIZE];"
+    assert check_no_vla(code, "test.c") == []
+
+
+def test_no_vla_clean_indexing():
+    code = "buf[i] = 0;"
+    assert check_no_vla(code, "test.c") == []
+
+
 def test_no_vla_detected():
-    # The VLA check matches \w+\s+name[var] then checks pre-context for a type
-    # keyword. A multi-keyword declaration like "int unsigned arr[n]" triggers it.
-    code = "int unsigned arr[size];"
+    code = "real_T arr[size];"
+    results = check_no_vla(code, "test.c")
+    assert len(results) == 1
+    assert results[0].check_id == "SAFE-006"
+
+
+def test_no_vla_detected_int():
+    code = "int arr[count];"
     results = check_no_vla(code, "test.c")
     assert len(results) == 1
     assert results[0].check_id == "SAFE-006"
@@ -152,7 +167,7 @@ def test_run_safety_checks_allow_function_pointers():
 
 
 def test_run_safety_checks_allow_vla():
-    code = "int unsigned arr[size];"
+    code = "real_T arr[size];"
     results_default = run_safety_checks(code, "test.c")
     results_allowed = run_safety_checks(code, "test.c", {"allow_vla": True})
     vla_default = [r for r in results_default if r.check_id == "SAFE-006"]
