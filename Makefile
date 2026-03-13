@@ -18,6 +18,9 @@ generate:
 	$(GENERATOR) generate --model models/pid_controller.yaml \
 		--platform platforms/desktop.yaml \
 		--output generated/desktop/
+	$(GENERATOR) generate --model models/pid_controller.yaml \
+		--platform platforms/cortex_m4.yaml \
+		--output generated/cortex_m4/
 	$(GENERATOR) generate --model models/lung_mnarx.yaml \
 		--platform platforms/aurix_tc397.yaml \
 		--output generated/aurix_tc397/
