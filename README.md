@@ -38,18 +38,28 @@ For compiling and testing the generated C code (optional):
 ## Quick Start
 
 ```bash
-pip install -e ".[dev]"
+git clone https://github.com/manju89jay/bakeC.git
+cd bakeC
+pip install -e ".[dev]"    # install bakec + dev dependencies (pytest, coverage)
+make all                    # generate → compile → test → validate
+```
 
-# Generate code
+`make all` runs the full pipeline: generates C code for all models and platforms,
+compiles the desktop target with GCC, runs 113 Python tests + 2 C test executables,
+and validates the output against 36 automated checks. If you only have Python
+installed (no GCC/CMake), the individual commands still work:
+
+```bash
+# Generate code for one model + platform
 python -m bakec.cli generate \
   --model models/lung_mnarx.yaml \
   --platform platforms/desktop.yaml \
   --output generated/desktop/
 
-# Validate generated output
+# Validate generated output (no compiler needed)
 python -m bakec.cli validate --target generated/desktop/
 
-# Run tests
+# Run Python tests
 python -m pytest tests/ -v
 ```
 
@@ -126,17 +136,16 @@ Each model + platform produces four files:
 
 ## Development
 
-```bash
-pip install -e ".[dev]"
+Individual Makefile targets:
 
-# Python tests (113 tests, 76% coverage)
-python -m pytest tests/ -v --cov=bakec
-
-# Full pipeline: generate all targets, compile desktop C, run all tests, validate
-make all
-```
-
-The `make all` target runs: `generate` → `build` (desktop GCC) → `test` (Python + C) → `validate` (36 checks).
+| Target | What it does | Requires |
+|--------|-------------|----------|
+| `make install` | Install bakec + dev dependencies | Python |
+| `make generate` | Generate C for all 6 model x platform combos | Python |
+| `make validate` | Run 36 checks (MISRA, traceability, safety, regression, API) | Python |
+| `make test` | Run Python tests (113) + C tests (2 executables) | Python + GCC |
+| `make build` | Compile desktop target with GCC/CMake | GCC + CMake |
+| `make all` | All of the above in sequence | Python + GCC + CMake |
 
 Cross-compilation targets (cortex_m4, aurix_tc397) are generated and validated but not
 compiled — cross-compilers are not required. This matches the industry pattern where CI
