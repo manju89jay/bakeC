@@ -100,8 +100,8 @@ class CodegenEngine:
             "meta": {
                 "generator_version": __version__,
                 "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-                "model_path": model_path,
-                "platform_path": platform_path,
+                "model_path": model_path.replace("\\", "/"),
+                "platform_path": platform_path.replace("\\", "/"),
                 "model_hash": model_hash,
                 "platform_hash": platform_hash,
             },
