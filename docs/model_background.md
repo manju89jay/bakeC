@@ -12,9 +12,8 @@ ARDS patients. I developed this model during my master thesis and published it a
 > [Paper](https://www.scirp.org/journal/paperinformation?paperid=70763) |
 > DOI: [10.4236/jbise.2016.910B014](https://doi.org/10.4236/jbise.2016.910B014)
 
-Using my own published model rather than a textbook example means I understand
-every coefficient, every design trade-off, and the clinical context behind the
-math -- not just the code generation wrapper around it.
+Using a model from my own thesis rather than a textbook example grounds the
+code generation work in a real engineering problem I once worked on closely.
 
 ### Core Equation
 
