@@ -15,10 +15,12 @@ elseif(PLATFORM STREQUAL "cortex_m4")
     set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/../generated/cortex_m4")
     include(cmake/toolchain_arm.cmake)
     add_compile_definitions(EMBEDDED_TARGET)
+    add_compile_options(-nostartfiles -ffreestanding)
 elseif(PLATFORM STREQUAL "aurix_tc397")
     set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/../generated/aurix_tc397")
     include(cmake/toolchain_tricore.cmake)
     add_compile_definitions(EMBEDDED_TARGET AURIX_TC397 SIL2_SAFETY)
+    add_compile_options(-nostartfiles -ffreestanding)
 endif()
 
 add_library(lung_controller STATIC

@@ -59,3 +59,30 @@ jobs:
 
       - name: Run full pipeline
         run: make all
+
+  cross-compile:
+    name: Cross-compile Cortex-M4
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Generate cortex_m4 code
+        run: |
+          python -m bakec.cli generate --model models/lung_mnarx.yaml --platform platforms/cortex_m4.yaml --output generated/cortex_m4/
+          python -m bakec.cli generate --model models/pid_controller.yaml --platform platforms/cortex_m4.yaml --output generated/cortex_m4/
+
+      - name: Compile with arm-none-eabi-gcc
+        run: |
+          cmake -B build/arm -S build -DPLATFORM=cortex_m4
+          cmake --build build/arm
