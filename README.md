@@ -82,6 +82,8 @@ src/bakec/
 
 - **Desktop** (`platforms/desktop.yaml`) -- GCC, `double` precision, assertions, `-O2`
 - **ARM Cortex-M4** (`platforms/cortex_m4.yaml`) -- `arm-none-eabi-gcc`, `float` precision, `-Os`
+- **AURIX TC397** (`platforms/aurix_tc397.yaml`) -- `tricore-elf-gcc`, `float` precision,
+  SIL 2 / PLd safety constraints, EtherCAT fieldbus, `-Os`
 
 ## Generated Output
 

@@ -9,9 +9,10 @@ and **Validate** (code to evidence).
 ```
   ┌──────────────┐     ┌──────────────┐
   │  Model YAML  │     │ Platform YAML│
-  │  (lung_mnarx │     │ (cortex_m4   │
-  │   pid_ctrl)  │     │  desktop)    │
-  └──────┬───────┘     └──────┬───────┘
+  │  (lung_mnarx │     │ (aurix_tc397 │
+  │   pid_ctrl)  │     │  cortex_m4   │
+  │              │     │  desktop)    │
+  └───────┴───────┘     └───────┴───────┘
          │                    │
          ▼                    ▼
   ┌─────────────────────────────────────┐
