@@ -58,6 +58,7 @@ def run_all_checks(
     target_dir: Path,
     baseline_dir: Path | None = None,
     rules: dict[str, Any] | None = None,
+    platforms_dir: Path | None = None,
 ) -> CheckReport:
     """Run all enabled checks against target directory.
 
@@ -65,6 +66,7 @@ def run_all_checks(
         target_dir: Directory containing generated .c and .h files.
         baseline_dir: Optional baseline directory for regression/API checks.
         rules: Optional rules dict. If None, all checks run with defaults.
+        platforms_dir: Directory containing platform YAML files for constraint checks.
 
     Returns:
         CheckReport with all findings.
@@ -74,6 +76,7 @@ def run_all_checks(
     from bakec.checks.safety import run_safety_checks
     from bakec.checks.regression import run_regression_checks
     from bakec.checks.api_stability import run_api_stability_checks
+    from bakec.checks.platform_constraints import run_platform_constraint_checks
 
     if rules is None:
         rules = {}
@@ -103,6 +106,15 @@ def run_all_checks(
         safety_rules = rules.get("safety", {})
         if safety_rules.get("enabled", True):
             report.results.extend(run_safety_checks(content, filename, safety_rules))
+
+        if platforms_dir:
+            plat_rules = rules.get("platform_constraints", {})
+            if plat_rules.get("enabled", True):
+                report.results.extend(
+                    run_platform_constraint_checks(
+                        content, filename, platforms_dir, plat_rules
+                    )
+                )
 
     if baseline_dir and baseline_dir.is_dir():
         reg_rules = rules.get("regression", {})

@@ -41,9 +41,9 @@ test-c:
 	@if [ -d "build/out" ]; then ctest --test-dir build/out --output-on-failure; fi
 
 validate:
-	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml
-	$(GENERATOR) validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml
-	$(GENERATOR) validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml
+	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+	$(GENERATOR) validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+	$(GENERATOR) validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
 
 clean:
 	rm -rf build/out generated/desktop generated/cortex_m4 generated/aurix_tc397 __pycache__

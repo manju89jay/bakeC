@@ -2,7 +2,7 @@
 
 Usage:
     bakec generate --model <path> --platform <path> --output <path> [--verbose]
-    bakec validate --target <dir> [--baseline <dir>] [--rules <path>] [--verbose]
+    bakec validate --target <dir> [--baseline <dir>] [--rules <path>] [--platforms-dir <dir>] [--verbose]
 """
 
 import argparse
@@ -134,8 +134,10 @@ def _cmd_validate(args: argparse.Namespace) -> None:
         with open(rules_path, "r", encoding="utf-8") as f:
             rules = yaml.safe_load(f) or {}
 
+    platforms_dir = args.platforms_dir
+
     print("Running checks...")
-    report = run_all_checks(target_dir, baseline_dir, rules)
+    report = run_all_checks(target_dir, baseline_dir, rules, platforms_dir)
     print()
 
     _print_report(report)
@@ -162,6 +164,7 @@ def main() -> None:
     val_parser.add_argument("--target", required=True, type=Path, help="Target directory with generated files")
     val_parser.add_argument("--baseline", type=Path, default=None, help="Baseline directory for regression checks")
     val_parser.add_argument("--rules", type=Path, default=None, help="Rules YAML file")
+    val_parser.add_argument("--platforms-dir", type=Path, default=None, help="Platform YAML directory for constraint checks")
     val_parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()

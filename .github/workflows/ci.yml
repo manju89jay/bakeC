@@ -35,9 +35,9 @@ jobs:
 
       - name: Validate generated code
         run: |
-          python -m bakec.cli validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml
-          python -m bakec.cli validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml
-          python -m bakec.cli validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml
+          python -m bakec.cli validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+          python -m bakec.cli validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+          python -m bakec.cli validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
 
   build:
     name: Full pipeline (make all)
