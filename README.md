@@ -2,10 +2,12 @@
 
 ![CI](https://github.com/manju89jay/bakeC/actions/workflows/ci.yml/badge.svg)
 
-A study of how MATLAB Embedded Coder's code generation architecture translates
-to modern open-source tooling -- YAML models, Jinja2 templates, and a Python
-orchestration layer that generates production-quality embedded C with
-traceability, MISRA compliance checking, and multi-platform support.
+Raw YAML in, baked C out. bakeC is an open-source code generation toolchain that
+reimplements the MATLAB Embedded Coder pipeline from scratch -- because the best
+way to understand a toolchain is to build one. YAML models replace Simulink blocks,
+Jinja2 templates replace TLC files, and Python ties it all together into
+production-quality embedded C with full traceability, MISRA compliance checking,
+and multi-platform targeting.
 
 ## What It Does
 
@@ -14,6 +16,14 @@ four C files per model: public API header, algorithm implementation, calibration
 data, and platform-specific type definitions. It then validates the generated
 output against 36 automated checks spanning MISRA C:2012, traceability,
 embedded safety patterns, regression detection, and API stability.
+
+The MATLAB Embedded Coder toolchain is powerful but proprietary, expensive, and
+opaque. bakeC asks: what does it actually take to build one? The answer turns out
+to be a YAML parser, a template engine, and a lot of opinions about what
+production-grade embedded C should look like. Every design decision -- from the
+struct-based I/O pattern to the init/step/terminate lifecycle -- maps directly to
+its Embedded Coder equivalent, documented in the [TLC mapping](docs/tlc-mapping.md)
+and [automotive mapping](docs/automotive-mapping.md).
 
 ```
 $ python -m bakec.cli validate --target generated/desktop/
@@ -65,7 +75,7 @@ python -m pytest tests/ -v
 
 ## Architecture
 
-bakeC reproduces the MATLAB Embedded Coder pipeline with two command paths:
+bakeC reimplements the MATLAB Embedded Coder pipeline with two command paths:
 
 **Generate:** YAML model + platform -> Parser -> Validator -> Jinja2 engine -> C files
 **Validate:** C files [+ baseline] -> MISRA + traceability + safety + regression checks -> report
