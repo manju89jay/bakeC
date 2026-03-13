@@ -18,6 +18,12 @@ generate:
 	$(GENERATOR) generate --model models/pid_controller.yaml \
 		--platform platforms/desktop.yaml \
 		--output generated/desktop/
+	$(GENERATOR) generate --model models/lung_mnarx.yaml \
+		--platform platforms/aurix_tc397.yaml \
+		--output generated/aurix_tc397/
+	$(GENERATOR) generate --model models/pid_controller.yaml \
+		--platform platforms/aurix_tc397.yaml \
+		--output generated/aurix_tc397/
 
 build:
 	cmake -B build/out -S build -DPLATFORM=desktop
@@ -37,7 +43,8 @@ quality:
 validate:
 	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml
 	$(GENERATOR) validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml
+	$(GENERATOR) validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml
 
 clean:
-	rm -rf build/out generated/desktop generated/cortex_m4 __pycache__
+	rm -rf build/out generated/desktop generated/cortex_m4 generated/aurix_tc397 __pycache__
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true

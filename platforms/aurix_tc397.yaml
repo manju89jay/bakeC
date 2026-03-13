@@ -1,0 +1,60 @@
+platform:
+  name: "AURIX TC397"
+  description: >
+    Infineon AURIX TC397 (TriCore 1.6.2) for safety-critical
+    hydraulic valve and industrial controller applications.
+    Single-precision FPU, SIL 2 / PLd rated.
+
+  compiler: "tricore-elf-gcc"
+  compiler_flags:
+    - "-mcpu=tc39xx"
+    - "-mfpu=single"
+    - "-Wall"
+    - "-Wextra"
+    - "-Os"
+    - "-std=c99"
+    - "-fno-common"
+    - "-ffunction-sections"
+    - "-fdata-sections"
+    - "-DEMBEDDED_TARGET"
+    - "-DAURIX_TC397"
+    - "-DSIL2_SAFETY"
+
+  types:
+    real_T: "float"
+    int_T: "int32_t"
+
+  constraints:
+    dynamic_memory: false
+    printf_allowed: false
+    assertions: false
+    floating_point: "single"
+
+  type_suffix: "f"
+
+  target:
+    mcu: "Infineon AURIX TC397"
+    architecture: "TriCore 1.6.2"
+    cores: 3
+    clock_mhz: 300
+    flash_kb: 16384
+    ram_kb: 6144
+    fpu: "single-precision"
+
+  safety:
+    sil: "SIL 2"
+    performance_level: "PLd"
+    standards:
+      - "IEC 61508"
+      - "ISO 13849-1"
+    watchdog_ms: 10
+    safe_state: "de-energize solenoid (spring-return to center)"
+
+  fieldbus:
+    protocol: "EtherCAT"
+    cycle_us: 1000
+
+  memory_budget:
+    max_stack_bytes: 4096
+    max_static_bytes: 8192
+    flash_sector: "PFlash0"

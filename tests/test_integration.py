@@ -48,3 +48,32 @@ def test_full_pipeline_cortex_m4(tmp_path):
     assert result.returncode == 0, f"CLI failed:\n{result.stderr}\n{result.stdout}"
     types_content = (tmp_path / "mnarx_lung_controller_types.h").read_text()
     assert "typedef float real_T" in types_content
+
+
+def test_full_pipeline_lung_aurix_tc397(tmp_path):
+    result = subprocess.run(
+        [sys.executable, "-m", "bakec.cli", "generate",
+         "--model", "models/lung_mnarx.yaml",
+         "--platform", "platforms/aurix_tc397.yaml",
+         "--output", str(tmp_path)],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"CLI failed:\n{result.stderr}\n{result.stdout}"
+    types_content = (tmp_path / "mnarx_lung_controller_types.h").read_text()
+    assert "typedef float real_T" in types_content
+    source = (tmp_path / "mnarx_lung_controller.c").read_text()
+    assert "mnarx_lung_step" in source
+    assert "DO NOT EDIT" in source
+    assert "#include <assert.h>" not in source
+
+
+def test_full_pipeline_pid_aurix_tc397(tmp_path):
+    result = subprocess.run(
+        [sys.executable, "-m", "bakec.cli", "generate",
+         "--model", "models/pid_controller.yaml",
+         "--platform", "platforms/aurix_tc397.yaml",
+         "--output", str(tmp_path)],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"CLI failed:\n{result.stderr}\n{result.stdout}"
+    assert (tmp_path / "pid_pressure_controller.c").exists()
