@@ -1,8 +1,12 @@
 # bakeC vs MATLAB Simulink Embedded Coder
 
-If you've used Embedded Coder, every concept in bakeC will look familiar. Same architecture, same separation of concerns, same output structure. The difference is that bakeC's entire pipeline fits in your head — and in a single git repo.
+If you've used Embedded Coder, every concept in bakeC will look familiar. Same architecture, same separation of concerns, same output structure. The difference is that bakeC's entire pipeline fits in your head — and in a single git repo you can actually read.
 
-## Architecture Mapping
+---
+
+## Architecture mapping
+
+The one-to-one correspondence, laid out so there's no ambiguity:
 
 | Simulink Embedded Coder | bakeC | Purpose |
 |---|---|---|
@@ -13,9 +17,11 @@ If you've used Embedded Coder, every concept in bakeC will look familiar. Same a
 | Model data file | `*_controller_data.c` | Static parameter arrays and constants |
 | Generated model `.c` / `.h` | `*_controller.c` / `.h` | Step/init/terminate functions |
 
-## Type System
+---
 
-Both systems use `real_T` to decouple the model from hardware precision. Same idea, same typedef names, same reason: write the algorithm once, deploy it on single- or double-precision targets without touching a line of model code.
+## Type system
+
+Both systems use `real_T` to decouple the model from hardware precision. Write the algorithm once, deploy it on single- or double-precision targets without changing a line. Same idea, same typedef names, same reason.
 
 | Platform | EC `real_T` | bakeC `real_T` |
 |---|---|---|
@@ -25,7 +31,9 @@ Both systems use `real_T` to decouple the model from hardware precision. Same id
 
 The generated `*_controller_types.h` contains `typedef double real_T;` or `typedef float real_T;` based on the platform YAML, plus fixed-width integer types from `<stdint.h>`. Swap the platform file, get the right types. Nothing else changes.
 
-## Block Type Mapping
+---
+
+## Block type mapping
 
 | Simulink Block | bakeC Block Type | Notes |
 |---|---|---|
@@ -36,14 +44,16 @@ The generated `*_controller_types.h` contains `typedef double real_T;` or `typed
 
 ### Unrolling
 
-Both EC and bakeC decide at generation time whether to unroll or loop. Small N means straight-line code with zero branch overhead. Large N means a compact loop that doesn't blow up the instruction cache.
+Both EC and bakeC decide at generation time whether to unroll or loop. Small N gets straight-line code with zero branch overhead. Large N gets a compact loop that doesn't blow up the instruction cache.
 
 - **EC**: configurable via "Loop unrolling threshold" in code generation settings
 - **bakeC**: N <= 8 unrolls, N > 8 generates a `for` loop (applies to `basis_function_sum` coefficients and `lookup_table` breakpoints)
 
 The threshold is hardcoded at 8. Opinions were had.
 
-## Pipeline Comparison
+---
+
+## Pipeline comparison
 
 Eight steps. Same order in both systems. Different tools, same job.
 
@@ -58,13 +68,19 @@ Eight steps. Same order in both systems. Different tools, same job.
 | 7. Quality checks | Polyspace, Model Advisor | `checks/` suite (MISRA, safety, traceability, regression, API stability) |
 | 8. Compile | Toolchain integration | CMake + platform toolchain |
 
+---
+
 ## Traceability
 
-EC generates `/* Block: '<Root>/PID'` comments linking code back to model blocks. bakeC does the same thing with `@trace` doc-comment tags pointing back to the model YAML path, plus a file banner with model path, platform path, generator version, and SHA-256 content hash. An auditor can verify that generated code matches a specific model version by checking the embedded hashes. No proprietary viewer required.
+EC generates `/* Block: '<Root>/PID'` comments linking code back to model blocks. bakeC does the same thing with `@trace` doc-comment tags pointing back to the model YAML path, plus a file banner with model path, platform path, generator version, and SHA-256 content hash.
 
-## What bakeC Does NOT Implement
+An auditor can verify that generated code matches a specific model version by checking the embedded hashes. No proprietary viewer required. No "please contact your MathWorks representative".
 
-bakeC reimplements the core pipeline, not the entire MathWorks ecosystem. These are deliberate scope boundaries, not TODO items:
+---
+
+## What bakeC does NOT implement
+
+These are deliberate scope boundaries, not a roadmap. bakeC reimplements the core code generation pipeline, not the entire MathWorks ecosystem.
 
 - **Graphical modeling** — no block diagram editor; models are hand-written YAML
 - **Stateflow** — no state machine / chart support
