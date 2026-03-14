@@ -1,0 +1,49 @@
+/**
+ * @brief 1D lookup table interpolation for {{ block.name }}
+ *
+ * {{ block.description | default("") | wordwrap(72) }}
+ *
+ * @trace {{ meta.model_path }} → blocks.{{ block.name }}
+ * @trace {{ block.equation_ref | default("") }}
+ *
+ * @param x  Input value to look up
+ * @return   Interpolated output value
+ */
+static real_T {{ block.name }}_interpolate(real_T x)
+{
+    /* Clamp to breakpoint range */
+    if (x <= {{ name }}_{{ block.name }}_bp[0]) {
+        return {{ name }}_{{ block.name }}_td[0];
+    }
+    if (x >= {{ name }}_{{ block.name }}_bp[{{ block.params.breakpoints | length - 1 }}]) {
+        return {{ name }}_{{ block.name }}_td[{{ block.params.breakpoints | length - 1 }}];
+    }
+
+{% if block.unroll %}
+    /* Unrolled search (N={{ block.params.breakpoints | length }} <= 8) */
+{% for i in range(block.params.breakpoints | length - 1) %}
+    if (x <= {{ name }}_{{ block.name }}_bp[{{ i + 1 }}]) {
+        real_T frac = (x - {{ name }}_{{ block.name }}_bp[{{ i }}])
+            / ({{ name }}_{{ block.name }}_bp[{{ i + 1 }}] - {{ name }}_{{ block.name }}_bp[{{ i }}]);
+        return {{ name }}_{{ block.name }}_td[{{ i }}]
+            + frac * ({{ name }}_{{ block.name }}_td[{{ i + 1 }}] - {{ name }}_{{ block.name }}_td[{{ i }}]);
+    }
+{% endfor %}
+{% else %}
+    /* Linear search for interval */
+    {
+        int32_T i;
+        for (i = 0; i < {{ block.params.breakpoints | length - 1 }}; i++) {
+            if (x <= {{ name }}_{{ block.name }}_bp[i + 1]) {
+                real_T frac = (x - {{ name }}_{{ block.name }}_bp[i])
+                    / ({{ name }}_{{ block.name }}_bp[i + 1] - {{ name }}_{{ block.name }}_bp[i]);
+                return {{ name }}_{{ block.name }}_td[i]
+                    + frac * ({{ name }}_{{ block.name }}_td[i + 1] - {{ name }}_{{ block.name }}_td[i]);
+            }
+        }
+    }
+{% endif %}
+
+    /* Should not reach here (clamped above), but satisfy MISRA */
+    return {{ name }}_{{ block.name }}_td[{{ block.params.breakpoints | length - 1 }}];
+}

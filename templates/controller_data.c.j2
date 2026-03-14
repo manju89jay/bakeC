@@ -34,5 +34,22 @@ const real_T {{ name }}_{{ block.name }}_knots[{{ block.params.num_basis_functio
 {% endfor %}
 };
 
+{% elif block.type == "lookup_table" %}
+/* {{ block.description }}
+ * @trace {{ meta.model_path }} → blocks.{{ block.name }}
+ * @trace {{ block.equation_ref | default("") }}
+ */
+const real_T {{ name }}_{{ block.name }}_bp[{{ block.params.breakpoints | length }}] = {
+{% for bp in block.params.breakpoints %}
+    {{ "%.4f" % bp }}{{ type_suffix }}{{ "," if not loop.last }}  /* bp[{{ loop.index0 }}] */
+{% endfor %}
+};
+
+const real_T {{ name }}_{{ block.name }}_td[{{ block.params.breakpoints | length }}] = {
+{% for td in block.params.table_data %}
+    {{ "%.4f" % td }}{{ type_suffix }}{{ "," if not loop.last }}  /* td[{{ loop.index0 }}] */
+{% endfor %}
+};
+
 {% endif %}
 {% endfor %}

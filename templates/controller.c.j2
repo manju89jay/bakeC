@@ -22,6 +22,9 @@
 {% if block.type == "basis_function_sum" %}
 extern const real_T {{ name }}_{{ block.name }}_coeffs[];
 extern const real_T {{ name }}_{{ block.name }}_knots[];
+{% elif block.type == "lookup_table" %}
+extern const real_T {{ name }}_{{ block.name }}_bp[];
+extern const real_T {{ name }}_{{ block.name }}_td[];
 {% endif %}
 {% endfor %}
 
@@ -40,6 +43,8 @@ static real_T {{ name }}_{{ s.name }} = {{ s.initial_value }}{{ type_suffix }};
 {% include "blocks/basis_function.c.j2" %}
 {% elif block.type == "pid" %}
 {% include "blocks/pid.c.j2" %}
+{% elif block.type == "lookup_table" %}
+{% include "blocks/lookup_table.c.j2" %}
 {% endif %}
 
 {% endfor %}
@@ -115,6 +120,15 @@ void {{ step_function }}(void)
         {{ "%.4f" % model.sample_time_s }}{{ type_suffix }}
     );
 
+{% elif block.type == "lookup_table" %}
+    /* --- Lookup table: {{ block.description }} ---
+     * @trace {{ meta.model_path }} → blocks.{{ block.name }}
+     * @trace {{ block.equation_ref | default("") }}
+     */
+    real_T {{ block.name }}_term = {{ block.name }}_interpolate(
+        {{ name }}_U.{{ block.params.input_signal }}
+    );
+
 {% elif block.type == "offset" %}
     /* --- Offset: {{ block.description }} ---
      * @trace {{ meta.model_path }} → blocks.{{ block.name }}
@@ -127,7 +141,7 @@ void {{ step_function }}(void)
     /* --- Compute output --- */
 {% set ns = namespace(terms=[]) %}
 {% for block in blocks %}
-{% if block.type == "basis_function_sum" or block.type == "offset" %}
+{% if block.type == "basis_function_sum" or block.type == "offset" or block.type == "lookup_table" %}
 {% set ns.terms = ns.terms + [block.name + "_term"] %}
 {% elif block.type == "pid" %}
 {% set ns.terms = ns.terms + [block.name + "_output"] %}

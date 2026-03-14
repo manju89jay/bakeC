@@ -1,0 +1,38 @@
+schema_version: "1.0"
+
+model:
+  name: "temp_sensor"
+  description: >
+    Thermistor temperature sensor linearization via 1D lookup table.
+    Converts raw ADC voltage to calibrated temperature for NTC
+    thermistor-based measurement systems.
+  sample_time_s: 0.01
+
+  inputs:
+    - name: "voltage"
+      description: "Raw ADC voltage from thermistor divider"
+      unit: "V"
+      data_type: "real_T"
+
+  outputs:
+    - name: "temperature"
+      description: "Calibrated temperature"
+      unit: "degC"
+      data_type: "real_T"
+
+  state: []
+
+  blocks:
+    - type: "lookup_table"
+      name: "ntc_linearize"
+      description: "NTC thermistor voltage-to-temperature characteristic"
+      equation_ref: "Steinhart-Hart linearization (tabulated)"
+      params:
+        input_signal: "voltage"
+        breakpoints: [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+        table_data: [120.0, 90.0, 65.0, 45.0, 28.0, 15.0, 5.0, -10.0]
+        extrapolation: "clamp"
+
+  constraints:
+    no_dynamic_memory: true
+    misra_compliant: true

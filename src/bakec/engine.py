@@ -80,6 +80,9 @@ class CodegenEngine:
             if block["type"] == "basis_function_sum":
                 n = block["params"]["num_basis_functions"]
                 block_ctx["unroll"] = n <= 8
+            elif block["type"] == "lookup_table":
+                n = len(block["params"]["breakpoints"])
+                block_ctx["unroll"] = n <= 8
             blocks.append(block_ctx)
 
         name_upper = name.upper()

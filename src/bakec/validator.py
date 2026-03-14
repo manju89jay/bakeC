@@ -28,6 +28,14 @@ def validate_model(data: dict[str, Any]) -> list[str]:
     - Kp, Ki, Kd are required
     - output_min must be < output_max (if both provided)
 
+    For lookup_table blocks:
+    - breakpoints must be a list with at least 2 elements
+    - table_data must be a list with at least 2 elements
+    - breakpoints and table_data must have equal length
+    - breakpoints must be strictly increasing
+    - input_signal is required
+    - extrapolation must be 'clamp'
+
     For offset blocks:
     - coefficient is required
     - input_signal is required
@@ -100,6 +108,44 @@ def validate_model(data: dict[str, Any]) -> list[str]:
                         f"block '{block_name}': output_min ({params['output_min']}) "
                         f"must be < output_max ({params['output_max']})"
                     )
+
+        elif block_type == "lookup_table":
+            breakpoints = params.get("breakpoints", [])
+            table_data = params.get("table_data", [])
+
+            if not isinstance(breakpoints, list) or len(breakpoints) < 2:
+                errors.append(
+                    f"block '{block_name}': breakpoints must be a list with at least 2 elements"
+                )
+
+            if not isinstance(table_data, list) or len(table_data) < 2:
+                errors.append(
+                    f"block '{block_name}': table_data must be a list with at least 2 elements"
+                )
+
+            if len(breakpoints) != len(table_data):
+                errors.append(
+                    f"block '{block_name}': breakpoints length ({len(breakpoints)}) "
+                    f"must equal table_data length ({len(table_data)})"
+                )
+
+            for j in range(len(breakpoints) - 1):
+                if breakpoints[j] >= breakpoints[j + 1]:
+                    errors.append(
+                        f"block '{block_name}': breakpoints must be strictly increasing "
+                        f"(breakpoints[{j}]={breakpoints[j]} >= "
+                        f"breakpoints[{j+1}]={breakpoints[j+1]})"
+                    )
+                    break
+
+            if "input_signal" not in params:
+                errors.append(f"block '{block_name}': missing required parameter 'input_signal'")
+
+            extrapolation = params.get("extrapolation", "clamp")
+            if extrapolation not in ("clamp",):
+                errors.append(
+                    f"block '{block_name}': extrapolation must be 'clamp', got '{extrapolation}'"
+                )
 
         elif block_type == "offset":
             if "coefficient" not in params:
