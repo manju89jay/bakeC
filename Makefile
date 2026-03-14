@@ -27,6 +27,15 @@ generate:
 	$(GENERATOR) generate --model models/pid_controller.yaml \
 		--platform platforms/aurix_tc397.yaml \
 		--output generated/aurix_tc397/
+	$(GENERATOR) generate --model models/lookup_table_1d.yaml \
+		--platform platforms/desktop.yaml \
+		--output generated/desktop/
+	$(GENERATOR) generate --model models/lookup_table_1d.yaml \
+		--platform platforms/cortex_m4.yaml \
+		--output generated/cortex_m4/
+	$(GENERATOR) generate --model models/lookup_table_1d.yaml \
+		--platform platforms/aurix_tc397.yaml \
+		--output generated/aurix_tc397/
 
 build:
 	cmake -B build/out -S build -DPLATFORM=desktop
