@@ -1,6 +1,6 @@
 # bakeC vs MATLAB Simulink Embedded Coder
 
-A mapping between bakeC's architecture and MATLAB Simulink Embedded Coder (EC) for engineers familiar with the MathWorks toolchain.
+If you've used Embedded Coder, every concept in bakeC will look familiar. Same architecture, same separation of concerns, same output structure. The difference is that bakeC's entire pipeline fits in your head — and in a single git repo.
 
 ## Architecture Mapping
 
@@ -15,7 +15,7 @@ A mapping between bakeC's architecture and MATLAB Simulink Embedded Coder (EC) f
 
 ## Type System
 
-Both systems use a `real_T` abstraction to decouple the model from hardware precision:
+Both systems use `real_T` to decouple the model from hardware precision. Same idea, same typedef names, same reason: write the algorithm once, deploy it on single- or double-precision targets without touching a line of model code.
 
 | Platform | EC `real_T` | bakeC `real_T` |
 |---|---|---|
@@ -23,7 +23,7 @@ Both systems use a `real_T` abstraction to decouple the model from hardware prec
 | ARM Cortex-M4 | `real32_T` / `float` | `float` |
 | Infineon AURIX TC397 | `real32_T` / `float` | `float` |
 
-bakeC mirrors the EC pattern: `*_controller_types.h` contains `typedef double real_T;` or `typedef float real_T;` based on the platform YAML, plus fixed-width integer types from `<stdint.h>`.
+The generated `*_controller_types.h` contains `typedef double real_T;` or `typedef float real_T;` based on the platform YAML, plus fixed-width integer types from `<stdint.h>`. Swap the platform file, get the right types. Nothing else changes.
 
 ## Block Type Mapping
 
@@ -36,12 +36,16 @@ bakeC mirrors the EC pattern: `*_controller_types.h` contains `typedef double re
 
 ### Unrolling
 
-Both EC and bakeC use a threshold to decide between unrolled and loop-based code:
+Both EC and bakeC decide at generation time whether to unroll or loop. Small N means straight-line code with zero branch overhead. Large N means a compact loop that doesn't blow up the instruction cache.
 
 - **EC**: configurable via "Loop unrolling threshold" in code generation settings
 - **bakeC**: N <= 8 unrolls, N > 8 generates a `for` loop (applies to `basis_function_sum` coefficients and `lookup_table` breakpoints)
 
+The threshold is hardcoded at 8. Opinions were had.
+
 ## Pipeline Comparison
+
+Eight steps. Same order in both systems. Different tools, same job.
 
 | Step | Embedded Coder | bakeC |
 |---|---|---|
@@ -56,15 +60,15 @@ Both EC and bakeC use a threshold to decide between unrolled and loop-based code
 
 ## Traceability
 
-EC generates `/* Block: '<Root>/PID'` comments linking code back to model blocks. bakeC does the same with `@trace` doc-comment tags linking generated functions back to the model YAML path, plus a file banner with model path, platform path, generator version, and SHA-256 content hash.
+EC generates `/* Block: '<Root>/PID'` comments linking code back to model blocks. bakeC does the same thing with `@trace` doc-comment tags pointing back to the model YAML path, plus a file banner with model path, platform path, generator version, and SHA-256 content hash. An auditor can verify that generated code matches a specific model version by checking the embedded hashes. No proprietary viewer required.
 
 ## What bakeC Does NOT Implement
 
-bakeC is a focused reimplementation, not a full replacement. The following EC features are out of scope:
+bakeC reimplements the core pipeline, not the entire MathWorks ecosystem. These are deliberate scope boundaries, not TODO items:
 
 - **Graphical modeling** — no block diagram editor; models are hand-written YAML
 - **Stateflow** — no state machine / chart support
-- **Continuous-time solvers** — bakeC is discrete-time only (fixed sample rate)
+- **Continuous-time solvers** — discrete-time only (fixed sample rate)
 - **Multi-rate / multi-tasking** — single-rate execution only
 - **Simulink Bus / Variant** — no bus objects or variant subsystems
 - **Hardware-in-the-loop (HIL)** — no PIL/SIL/HIL test harness generation
@@ -74,3 +78,5 @@ bakeC is a focused reimplementation, not a full replacement. The following EC fe
 - **Data dictionary** — parameters live in the model YAML, no external data dictionary
 - **AUTOSAR / ASAM** — no AUTOSAR-compliant interface generation
 - **Custom Storage Classes** — all data is statically allocated with a fixed layout
+
+Twelve things Embedded Coder does that bakeC doesn't. On the other hand, bakeC has a readable codebase, a `git log`, and no license dongle.

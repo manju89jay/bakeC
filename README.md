@@ -1,29 +1,18 @@
 # bakeC
 
+![bakeC](bakeC-logo.svg)
+
 ![CI](https://github.com/manju89jay/bakeC/actions/workflows/ci.yml/badge.svg)
 
-Raw YAML in, baked C out. bakeC is an open-source code generation toolchain that
-reimplements the MATLAB Embedded Coder pipeline from scratch -- because the best
-way to understand a toolchain is to build one. YAML models replace Simulink blocks,
-Jinja2 templates replace TLC files, and Python ties it all together into
-production-quality embedded C with full traceability, MISRA compliance checking,
-and multi-platform targeting.
+Raw YAML in, baked C out. MATLAB Embedded Coder costs six figures, hides everything behind a GUI, and generates code you're not supposed to touch. bakeC does the same job with YAML models, Jinja2 templates, and Python — and you can read every line of every file in the pipeline. Because the best way to understand a toolchain is to build one.
 
 ## What It Does
 
-bakeC takes a YAML model definition and a platform configuration, and produces
-four C files per model: public API header, algorithm implementation, calibration
-data, and platform-specific type definitions. It then validates the generated
-output against 36 automated checks spanning MISRA C:2012, traceability,
-embedded safety patterns, regression detection, and API stability.
+You give bakeC a YAML model and a platform config. It gives you four C files: public API header, algorithm implementation, calibration data, and platform-specific types. No license server. No support contract. No mystery.
 
-The MATLAB Embedded Coder toolchain is powerful but proprietary, expensive, and
-opaque. bakeC asks: what does it actually take to build one? The answer turns out
-to be a YAML parser, a template engine, and a lot of opinions about what
-production-grade embedded C should look like. Every design decision -- from the
-struct-based I/O pattern to the init/step/terminate lifecycle -- maps directly to
-its Embedded Coder equivalent, documented in the [TLC mapping](docs/tlc-mapping.md)
-and [automotive mapping](docs/automotive-mapping.md).
+Then it validates the output against 36 automated checks — MISRA C:2012, traceability, embedded safety patterns, regression detection, and API stability. Every check has a name, a reason, and a pass/fail. Not a cryptic code you have to look up in a 400-page PDF.
+
+The entire pipeline maps 1:1 to Embedded Coder. Struct-based I/O. init/step/terminate lifecycle. Static allocation. Platform-portable types. If you know Embedded Coder, you already know this architecture. The difference is you can actually see what's happening. Documented in the [TLC mapping](docs/tlc-mapping.md) and [automotive mapping](docs/automotive-mapping.md).
 
 ```
 $ python -m bakec.cli validate --target generated/desktop/
@@ -54,10 +43,7 @@ pip install -e ".[dev]"    # install bakec + dev dependencies (pytest, coverage)
 make all                    # generate → compile → test → validate
 ```
 
-`make all` runs the full pipeline: generates C code for all models and platforms,
-compiles the desktop target with GCC, runs 113 Python tests + 2 C test executables,
-and validates the output against 36 automated checks. If you only have Python
-installed (no GCC/CMake), the individual commands still work:
+`make all` runs the full pipeline: generates C for all models and platforms, compiles the desktop target with GCC, runs 172 Python tests + 3 C test executables, and validates the output against 36 checks. No GCC? No problem — the individual commands still work with just Python:
 
 ```bash
 # Generate code for one model + platform
@@ -75,7 +61,7 @@ python -m pytest tests/ -v
 
 ## Architecture
 
-bakeC reimplements the MATLAB Embedded Coder pipeline with two command paths:
+Two pipelines. One generates code, one validates it.
 
 **Generate:** YAML model + platform -> Parser -> Validator -> Jinja2 engine -> C files
 **Validate:** C files [+ baseline] -> MISRA + traceability + safety + regression checks -> report
@@ -99,14 +85,20 @@ src/bakec/
 
 ## Models
 
+Three models. Each one exercises a different part of the code generator.
+
 - **mNARX Lung** (`models/lung_mnarx.yaml`) -- Modified nonlinear autoregressive
   lung mechanics model with pressure-dependent B-spline basis functions.
   Based on [Jayaramaiah et al. (2016)](https://www.scirp.org/journal/paperinformation?paperid=70763),
   developed during my master thesis. See [model background](docs/model_background.md).
 - **PID Controller** (`models/pid_controller.yaml`) -- PID pressure controller
-  for hydraulic valve systems.
+  for hydraulic valve systems. The bread-and-butter of embedded control.
+- **Lookup Table 1D** (`models/lookup_table_1d.yaml`) -- Thermistor NTC temperature
+  sensor with 8-breakpoint piecewise linear interpolation and clamped extrapolation.
 
 ## Platforms
+
+Three targets. One for debugging, two for shipping.
 
 - **Desktop** (`platforms/desktop.yaml`) -- GCC, `double` precision, assertions, `-O2`
 - **ARM Cortex-M4** (`platforms/cortex_m4.yaml`) -- `arm-none-eabi-gcc`, `float` precision, `-Os`
@@ -126,6 +118,8 @@ Each model + platform produces four files:
 
 ## Validation Checks
 
+36 checks across five categories. All of them run on every `make validate`.
+
 | Category | Count | Scope |
 |---|---|---|
 | MISRA C:2012 | 10 | Per-file static analysis |
@@ -139,6 +133,7 @@ Each model + platform produces four files:
 - [Architecture](docs/architecture.md) -- system design with C4 diagrams
 - [TLC Mapping](docs/tlc-mapping.md) -- MATLAB TLC to Jinja2 equivalences
 - [Automotive Mapping](docs/automotive-mapping.md) -- AUTOSAR concept parallels
+- [Simulink Comparison](docs/simulink-comparison.md) -- Embedded Coder feature mapping
 - [Safety Context](docs/safety-context.md) -- IEC 61508, ISO 13849-1, MISRA
 - [Model Background](docs/model_background.md) -- mNARX lung mechanics
 - [Architecture Decision Records](docs/decisions/) -- 6 ADRs
@@ -151,15 +146,13 @@ Individual Makefile targets:
 | Target | What it does | Requires |
 |--------|-------------|----------|
 | `make install` | Install bakec + dev dependencies | Python |
-| `make generate` | Generate C for all 6 model x platform combos | Python |
+| `make generate` | Generate C for all 9 model x platform combos | Python |
 | `make validate` | Run 36 checks (MISRA, traceability, safety, regression, API) | Python |
-| `make test` | Run Python tests (113) + C tests (2 executables) | Python + GCC |
+| `make test` | Run Python tests (172) + C tests (3 executables) | Python + GCC |
 | `make build` | Compile desktop target with GCC/CMake | GCC + CMake |
 | `make all` | All of the above in sequence | Python + GCC + CMake |
 
-Cross-compilation targets (cortex_m4, aurix_tc397) are generated and validated but not
-compiled — cross-compilers are not required. This matches the industry pattern where CI
-validates generated code quality; firmware compilation happens in the target build system.
+Cross-compilation targets (cortex_m4, aurix_tc397) are generated and validated but not compiled locally. Cross-compilers are not required. This matches how it works in industry: CI validates the generated code; the firmware team compiles it in their own build system.
 
 ## License
 
