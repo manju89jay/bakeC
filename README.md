@@ -1,6 +1,6 @@
 # bakeC
 
-<img src="bakeC-logo.svg" alt="bakeC" width="50%">
+<img src="bakeC-logo.svg" alt="bakeC" width="25%">
 
 ![CI](https://github.com/manju89jay/bakeC/actions/workflows/ci.yml/badge.svg)
 
