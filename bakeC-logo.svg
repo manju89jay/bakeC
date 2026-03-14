@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="160" viewBox="0 0 480 160">
+  <defs>
+    <linearGradient id="chipGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FAC775"/>
+      <stop offset="100%" stop-color="#BA7517"/>
+    </linearGradient>
+    <linearGradient id="wordGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#EF9F27"/>
+      <stop offset="100%" stop-color="#BA7517"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Steam wisps -->
+  <path d="M56 38 Q52 28 56 20 Q60 12 56 4"   fill="none" stroke="#EF9F27" stroke-width="2"   stroke-linecap="round" opacity=".55"/>
+  <path d="M72 34 Q68 24 72 16 Q76 8  72 0"   fill="none" stroke="#EF9F27" stroke-width="2"   stroke-linecap="round" opacity=".38"/>
+  <path d="M88 38 Q84 28 88 20 Q92 12 88 4"   fill="none" stroke="#EF9F27" stroke-width="2"   stroke-linecap="round" opacity=".55"/>
+
+  <!-- Chip body -->
+  <rect x="36" y="42" width="88" height="88" rx="14" fill="url(#chipGrad)" stroke="#854F0B" stroke-width="2"/>
+
+  <!-- Grid lines vertical -->
+  <line x1="57"  y1="42" x2="57"  y2="130" stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+  <line x1="72"  y1="42" x2="72"  y2="130" stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+  <line x1="88"  y1="42" x2="88"  y2="130" stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+  <line x1="103" y1="42" x2="103" y2="130" stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+
+  <!-- Grid lines horizontal -->
+  <line x1="36" y1="62"  x2="124" y2="62"  stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+  <line x1="36" y1="78"  x2="124" y2="78"  stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+  <line x1="36" y1="94"  x2="124" y2="94"  stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+  <line x1="36" y1="110" x2="124" y2="110" stroke="#854F0B" stroke-width=".9" opacity=".35"/>
+
+  <!-- Pins left -->
+  <rect x="22" y="56"  width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="22" y="71"  width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="22" y="86"  width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="22" y="101" width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="22" y="116" width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+
+  <!-- Pins right -->
+  <rect x="123" y="56"  width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="123" y="71"  width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="123" y="86"  width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="123" y="101" width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+  <rect x="123" y="116" width="15" height="8" rx="2.5" fill="#854F0B" opacity=".9"/>
+
+  <!-- Center mark -->
+  <circle cx="80" cy="86" r="16" fill="#854F0B" opacity=".18"/>
+  <text x="80" y="92" text-anchor="middle"
+        font-family="'Courier New', Courier, monospace"
+        font-size="15" font-weight="700" fill="#412402">bC</text>
+
+  <!-- Wordmark: bake -->
+  <text x="152" y="106"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="62" font-weight="700"
+        fill="#1a1a18">bake</text>
+
+  <!-- Wordmark: C in amber -->
+  <text x="359" y="106"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="62" font-weight="700"
+        fill="url(#wordGrad)">C</text>
+
+  <!-- Tagline -->
+  <text x="152" y="130"
+        font-family="'Courier New', Courier, monospace"
+        font-size="13" letter-spacing="1"
+        fill="#888780">raw yaml in · baked C out</text>
+</svg>
