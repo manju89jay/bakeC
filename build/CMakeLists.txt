@@ -35,6 +35,12 @@ add_library(pid_controller STATIC
 )
 target_include_directories(pid_controller PUBLIC ${GENERATED_DIR})
 
+add_library(lookup_controller STATIC
+    ${GENERATED_DIR}/temp_sensor_controller.c
+    ${GENERATED_DIR}/temp_sensor_controller_data.c
+)
+target_include_directories(lookup_controller PUBLIC ${GENERATED_DIR})
+
 if(PLATFORM STREQUAL "desktop")
     enable_testing()
 
@@ -49,4 +55,10 @@ if(PLATFORM STREQUAL "desktop")
     )
     target_link_libraries(test_pid_controller pid_controller m)
     add_test(NAME pid_controller COMMAND test_pid_controller)
+
+    add_executable(test_lookup_table
+        ${CMAKE_SOURCE_DIR}/../tests/c/test_lookup_table.c
+    )
+    target_link_libraries(test_lookup_table lookup_controller m)
+    add_test(NAME lookup_table COMMAND test_lookup_table)
 endif()

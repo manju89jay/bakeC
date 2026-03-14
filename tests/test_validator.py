@@ -102,3 +102,58 @@ def test_pid_invalid_output_limits():
     }])
     errors = validate_model(model)
     assert any("output_min" in e for e in errors)
+
+
+def _lookup_block(**overrides):
+    base = {
+        "type": "lookup_table",
+        "name": "lut",
+        "params": {
+            "input_signal": "x",
+            "breakpoints": [0.0, 1.0, 2.0, 3.0],
+            "table_data": [10.0, 20.0, 30.0, 40.0],
+            "extrapolation": "clamp",
+        }
+    }
+    base["params"].update(overrides)
+    return base
+
+
+def test_lookup_table_valid():
+    model = _make_model(blocks=[_lookup_block()])
+    errors = validate_model(model)
+    assert errors == []
+
+
+def test_lookup_table_breakpoints_not_increasing():
+    model = _make_model(blocks=[_lookup_block(
+        breakpoints=[0.0, 5.0, 3.0, 10.0]
+    )])
+    errors = validate_model(model)
+    assert any("strictly increasing" in e for e in errors)
+
+
+def test_lookup_table_length_mismatch():
+    model = _make_model(blocks=[_lookup_block(
+        breakpoints=[0.0, 1.0, 2.0],
+        table_data=[10.0, 20.0, 30.0, 40.0],
+    )])
+    errors = validate_model(model)
+    assert any("length" in e for e in errors)
+
+
+def test_lookup_table_too_few_breakpoints():
+    model = _make_model(blocks=[_lookup_block(
+        breakpoints=[1.0],
+        table_data=[10.0],
+    )])
+    errors = validate_model(model)
+    assert any("at least 2" in e for e in errors)
+
+
+def test_lookup_table_missing_input_signal():
+    block = _lookup_block()
+    del block["params"]["input_signal"]
+    model = _make_model(blocks=[block])
+    errors = validate_model(model)
+    assert any("input_signal" in e for e in errors)
