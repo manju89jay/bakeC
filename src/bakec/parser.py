@@ -4,9 +4,30 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import jsonschema
 import yaml
 
+from bakec.schema import MODEL_SCHEMA, PLATFORM_SCHEMA
+
 logger = logging.getLogger("bakec")
+
+
+def _validate_schema(data: dict, schema: dict, path: Path) -> None:
+    """Validate data against a JSON Schema, raising ValueError on failure.
+
+    Args:
+        data: Parsed YAML data to validate.
+        schema: JSON Schema dict.
+        path: Source file path (for error messages).
+
+    Raises:
+        ValueError: If schema validation fails, with the JSON path and message.
+    """
+    try:
+        jsonschema.validate(data, schema)
+    except jsonschema.ValidationError as exc:
+        json_path = " → ".join(str(p) for p in exc.absolute_path) or "(root)"
+        raise ValueError(f"{path}: schema error at {json_path}: {exc.message}") from exc
 
 
 def parse_model(path: Path) -> dict[str, Any]:
@@ -21,8 +42,8 @@ def parse_model(path: Path) -> dict[str, Any]:
     Raises:
         FileNotFoundError: If the model file does not exist.
         yaml.YAMLError: If the YAML is malformed.
-        ValueError: If required top-level keys are missing.
-            Required model keys: name, sample_time_s, inputs, outputs, blocks.
+        ValueError: If required top-level keys are missing or schema
+            validation fails.
     """
     if not path.exists():
         raise FileNotFoundError(f"Model file not found: {path}")
@@ -34,12 +55,9 @@ def parse_model(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict) or "model" not in data:
         raise ValueError(f"{path}: YAML must contain a 'model' key")
 
-    model = data["model"]
-    required_keys = ["name", "sample_time_s", "inputs", "outputs", "blocks"]
-    for key in required_keys:
-        if key not in model:
-            raise ValueError(f"{path}: model must contain '{key}'")
+    _validate_schema(data, MODEL_SCHEMA, path)
 
+    model = data["model"]
     logger.info("Parsed model '%s' with %d blocks", model["name"], len(model["blocks"]))
     return data
 
@@ -56,8 +74,8 @@ def parse_platform(path: Path) -> dict[str, Any]:
     Raises:
         FileNotFoundError: If the platform file does not exist.
         yaml.YAMLError: If the YAML is malformed.
-        ValueError: If required top-level keys are missing.
-            Required platform keys: name, types, constraints.
+        ValueError: If required top-level keys are missing or schema
+            validation fails.
     """
     if not path.exists():
         raise FileNotFoundError(f"Platform file not found: {path}")
@@ -69,11 +87,8 @@ def parse_platform(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict) or "platform" not in data:
         raise ValueError(f"{path}: YAML must contain a 'platform' key")
 
-    platform = data["platform"]
-    required_keys = ["name", "types", "constraints"]
-    for key in required_keys:
-        if key not in platform:
-            raise ValueError(f"{path}: platform must contain '{key}'")
+    _validate_schema(data, PLATFORM_SCHEMA, path)
 
+    platform = data["platform"]
     logger.info("Parsed platform '%s'", platform["name"])
     return data

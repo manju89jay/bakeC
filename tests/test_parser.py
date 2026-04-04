@@ -41,3 +41,102 @@ def test_missing_model_key(tmp_path):
     bad_file.write_text("something: else\n")
     with pytest.raises(ValueError, match="must contain a 'model' key"):
         parse_model(bad_file)
+
+
+# --- Schema validation tests ---
+
+
+def test_schema_rejects_non_numeric_sample_time(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "model:\n"
+        "  name: test\n"
+        "  sample_time_s: not_a_number\n"
+        "  inputs: [{name: x, data_type: real_T}]\n"
+        "  outputs: [{name: y, data_type: real_T}]\n"
+        "  blocks: []\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*sample_time_s"):
+        parse_model(bad)
+
+
+def test_schema_rejects_negative_sample_time(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "model:\n"
+        "  name: test\n"
+        "  sample_time_s: -1.0\n"
+        "  inputs: [{name: x, data_type: real_T}]\n"
+        "  outputs: [{name: y, data_type: real_T}]\n"
+        "  blocks: []\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*sample_time_s"):
+        parse_model(bad)
+
+
+def test_schema_rejects_invalid_data_type(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "model:\n"
+        "  name: test\n"
+        "  sample_time_s: 0.01\n"
+        "  inputs: [{name: x, data_type: banana}]\n"
+        "  outputs: [{name: y, data_type: real_T}]\n"
+        "  blocks: []\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*data_type"):
+        parse_model(bad)
+
+
+def test_schema_rejects_block_without_name(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "model:\n"
+        "  name: test\n"
+        "  sample_time_s: 0.01\n"
+        "  inputs: [{name: x, data_type: real_T}]\n"
+        "  outputs: [{name: y, data_type: real_T}]\n"
+        "  blocks:\n"
+        "    - type: pid\n"
+        "      params: {Kp: 1.0}\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*name"):
+        parse_model(bad)
+
+
+def test_schema_rejects_invalid_model_name(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "model:\n"
+        "  name: Invalid-Name\n"
+        "  sample_time_s: 0.01\n"
+        "  inputs: [{name: x, data_type: real_T}]\n"
+        "  outputs: [{name: y, data_type: real_T}]\n"
+        "  blocks: []\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*name"):
+        parse_model(bad)
+
+
+def test_platform_schema_rejects_missing_types(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "platform:\n"
+        "  name: test\n"
+        "  constraints: {}\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*types"):
+        parse_platform(bad)
+
+
+def test_platform_schema_rejects_missing_real_T(tmp_path):
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "platform:\n"
+        "  name: test\n"
+        "  types:\n"
+        "    int_T: int32_t\n"
+        "  constraints: {}\n"
+    )
+    with pytest.raises(ValueError, match="schema error.*real_T"):
+        parse_platform(bad)
