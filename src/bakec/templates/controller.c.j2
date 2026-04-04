@@ -45,6 +45,8 @@ static real_T {{ name }}_{{ s.name }} = {{ s.initial_value }}{{ type_suffix }};
 {% include "blocks/pid.c.j2" %}
 {% elif block.type == "lookup_table" %}
 {% include "blocks/lookup_table.c.j2" %}
+{% elif block.type == "offset" %}
+{# offset blocks are computed inline in the step function #}
 {% else %}
 #error "Unknown block type: {{ block.type }}"
 {% endif %}
