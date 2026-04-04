@@ -3,7 +3,7 @@
 # Status: pending | done | blocked
 # Plan: .claude/plans/misty-whistling-wren.md
 
-current_phase: 3
+current_phase: 4
 phases:
   1:
     name: "Foundation Fixes"
@@ -43,16 +43,16 @@ phases:
         commit: 9e2b326
   3:
     name: "Test Infrastructure"
-    status: pending
+    status: done
     items:
       1.5:
         name: "Golden-file regression tests"
-        status: pending
-        files: [tests/test_golden_files.py]
+        status: done
+        commit: f9a5898
       1.6:
         name: "C compilation test in CI"
-        status: pending
-        files: [.gitlab-ci.yml, .github/workflows/ci.yml]
+        status: done
+        commit: 71b4e82
   4:
     name: "Platform and Engine Correctness"
     status: pending
