@@ -1,7 +1,14 @@
-"""MISRA C:2012 subset checks for generated code.
+"""MISRA C:2012 inspired code quality checks.
 
-Text-based pattern matching — no C parser required. Each check function
-takes file content and filename, returns a list of CheckResult.
+Regex-based approximations of a small MISRA C:2012 subset. These are NOT
+a substitute for a certified MISRA analyzer (cppcheck --addon=misra,
+PC-lint, Polyspace). They catch common violations via text pattern
+matching but may produce false positives and will miss violations that
+require semantic analysis (type promotion, pointer arithmetic, side
+effects in controlling expressions, etc.).
+
+Each check function takes file content and filename, returns a list of
+CheckResult.
 """
 
 import re
@@ -65,7 +72,11 @@ def _extract_functions(content: str) -> list[dict]:
 
 
 def check_no_dynamic_memory(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-21.3: No dynamic memory allocation."""
+    """MISRA-21.3: No dynamic memory allocation.
+
+    Regex approximation. Catches direct calls to malloc/calloc/realloc/free.
+    Limitation: misses calls through macros, wrappers, or function pointers.
+    """
     results = []
     stripped = _strip_comments(content)
     for pattern in (r'\bmalloc\s*\(', r'\bcalloc\s*\(', r'\brealloc\s*\(', r'\bfree\s*\('):
@@ -82,7 +93,12 @@ def check_no_dynamic_memory(content: str, filename: str) -> list[CheckResult]:
 
 
 def check_no_recursion(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-17.2: No recursive function calls."""
+    """MISRA-17.2: No recursive function calls.
+
+    Regex approximation. Only detects direct self-recursion (A calls A).
+    Limitation: misses indirect recursion (A→B→A) and calls through
+    function pointers.
+    """
     results = []
     for func in _extract_functions(content):
         # Check if function name appears as a call inside its own body
@@ -100,7 +116,12 @@ def check_no_recursion(content: str, filename: str) -> list[CheckResult]:
 
 
 def check_explicit_return_type(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-8.1: All function definitions must have explicit return type."""
+    """MISRA-8.1: All function definitions must have explicit return type.
+
+    Regex approximation. Checks for bare identifier( at line start.
+    Limitation: may false-positive on macros that expand to function-like
+    syntax; misses multi-line return types.
+    """
     results = []
     stripped = _strip_comments(content)
     # Find lines that look like function definitions without a return type
@@ -124,7 +145,12 @@ def check_explicit_return_type(content: str, filename: str) -> list[CheckResult]
 
 
 def check_implicit_type_conversion(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-10.1: Flag obvious narrowing assignments without cast."""
+    """MISRA-10.1: Flag obvious narrowing assignments without cast.
+
+    Regex approximation. Checks 3 hardcoded narrowing patterns only.
+    Limitation: misses narrowing through return values, function args,
+    casts, or types not in its pattern list.
+    """
     results = []
     stripped = _strip_comments(content)
     # Look for int32_T = int16_T or similar narrowing patterns
@@ -147,7 +173,12 @@ def check_implicit_type_conversion(content: str, filename: str) -> list[CheckRes
 
 
 def check_else_termination(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-15.7: if/else-if chains must be terminated with final else."""
+    """MISRA-15.7: if/else-if chains must be terminated with final else.
+
+    Regex approximation. Limitation: the [^}]* pattern cannot handle
+    nested braces, so non-trivial if/else-if chains with nested blocks
+    may be missed.
+    """
     results = []
     stripped = _strip_comments(content)
     # Find "} else if (...) { ... }" NOT followed by "} else {"
@@ -171,7 +202,11 @@ def check_else_termination(content: str, filename: str) -> list[CheckResult]:
 
 
 def check_unused_parameters(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-2.7: Function parameters should be referenced in body."""
+    """MISRA-2.7: Function parameters should be referenced in body.
+
+    Regex approximation. Limitation: simple word-boundary search may miss
+    usage through pointer arithmetic or struct member access patterns.
+    """
     results = []
     for func in _extract_functions(content):
         if not func["params"].strip() or func["params"].strip() == "void":
@@ -200,7 +235,12 @@ def check_unused_parameters(content: str, filename: str) -> list[CheckResult]:
 
 
 def check_extern_has_definition(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-8.4: extern declarations should have matching definitions."""
+    """MISRA-8.4: extern declarations should have matching definitions.
+
+    Regex approximation. Checks single-file scope only.
+    Limitation: cannot verify cross-file linkage; misses extern
+    definitions split across translation units.
+    """
     results = []
     stripped = _strip_comments(content)
     # Only check .c files — extern in .h is expected
@@ -226,7 +266,13 @@ def check_extern_has_definition(content: str, filename: str) -> list[CheckResult
 
 
 def check_loop_var_modification(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-14.2: Loop variable should not be modified in loop body."""
+    """MISRA-14.2: Loop variable should not be modified in loop body.
+
+    Regex approximation. Only parses for(type var = ...; ...; var++) style.
+    Limitation: breaks on multi-variable loops, complex increment
+    expressions, or loops where the variable name collides with other
+    identifiers.
+    """
     results = []
     stripped = _strip_comments(content)
     # Find for loops: for (type var = ...; ...; var++)
@@ -261,7 +307,12 @@ def check_loop_var_modification(content: str, filename: str) -> list[CheckResult
 
 
 def check_no_stdio(content: str, filename: str, exceptions: list[str] | None = None) -> list[CheckResult]:
-    """MISRA-21.6: No stdio functions unless exceptions apply."""
+    """MISRA-21.6: No stdio functions unless exceptions apply.
+
+    Regex approximation. Catches direct calls to printf/fprintf/scanf/puts.
+    Limitation: misses calls through macros or wrappers; the exception
+    mechanism only checks for string presence (e.g. SIMULATION_MODE).
+    """
     if exceptions:
         for exc in exceptions:
             if exc in content:
@@ -283,7 +334,12 @@ def check_no_stdio(content: str, filename: str, exceptions: list[str] | None = N
 
 
 def check_const_pointer_params(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-8.13: Pointer parameters that could be const."""
+    """MISRA-8.13: Pointer parameters that could be const.
+
+    Regex approximation. Checks for direct array assignment or
+    dereference assignment only. Limitation: misses modification through
+    passed-to-function, pointer arithmetic, or cast patterns.
+    """
     results = []
     for func in _extract_functions(content):
         if not func["params"].strip() or func["params"].strip() == "void":

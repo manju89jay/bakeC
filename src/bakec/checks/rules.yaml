@@ -2,6 +2,11 @@
 #
 # Each section can be disabled entirely with "enabled: false".
 # Individual MISRA rules can be toggled and have severity overridden.
+#
+# NOTE: MISRA checks are regex-based pattern approximations, not certified
+# MISRA C:2012 compliance checks. For certified analysis, use a qualified
+# static analysis tool (cppcheck --addon=misra, PC-lint, Polyspace).
+# See each check's docstring in misra.py for specific limitations.
 
 misra:
   enabled: true
