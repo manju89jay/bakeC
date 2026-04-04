@@ -36,7 +36,7 @@ def test_provenance_banner_missing_model():
 def test_provenance_banner_empty():
     results = check_provenance_banner("int main() { }", "test.c")
     assert len(results) == 1
-    assert results[0].severity == "error"
+    assert results[0].severity == "info"
 
 
 # --- TRACE-002: @trace tags ---

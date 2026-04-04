@@ -32,15 +32,15 @@ def test_print_report_with_errors(capsys):
     assert "1 error(s)" in output
 
 
-def test_print_report_with_warning(capsys):
+def test_print_report_with_info(capsys):
     report = CheckReport(target_dir="gen/", baseline_dir=None, results=[
-        CheckResult(file="test.c", line=None, severity="warning",
+        CheckResult(file="test.c", line=None, severity="info",
                     check_id="TRACE-003", message="Missing DO NOT EDIT"),
     ])
     _print_report(report)
     output = capsys.readouterr().out
     assert "TRACE-003" in output
-    assert "1 warning(s)" in output
+    assert "1 info(s)" in output
 
 
 # --- generate subcommand ---

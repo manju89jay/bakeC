@@ -78,7 +78,12 @@ def check_no_recursion(content: str, filename: str) -> list[CheckResult]:
 
 
 def check_bounded_loops(content: str, filename: str) -> list[CheckResult]:
-    """SAFE-003: Every for/while loop must have a visible bound."""
+    """SAFE-003: Every for/while loop must have a visible bound.
+
+    Structural guard — bakeC templates only generate bounded for-loops
+    with literal upper bounds. This check catches hand-edited code that
+    introduces while(1), while(true), or for(;;) patterns.
+    """
     results = []
     stripped = _strip_comments(content)
 
@@ -113,7 +118,12 @@ def check_bounded_loops(content: str, filename: str) -> list[CheckResult]:
 
 
 def check_no_function_pointers(content: str, filename: str) -> list[CheckResult]:
-    """SAFE-004: No function pointers."""
+    """SAFE-004: No function pointers.
+
+    Structural guard — bakeC templates never generate function pointers.
+    This check catches hand-edited code that introduces function pointer
+    declarations or callback patterns.
+    """
     results = []
     stripped = _strip_comments(content)
     # Match function pointer declarations: (*name) or typedef ... (*name)
