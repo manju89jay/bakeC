@@ -3,28 +3,28 @@
 # Status: pending | done | blocked
 # Plan: .claude/plans/misty-whistling-wren.md
 
-current_phase: 1
+current_phase: 2
 phases:
   1:
     name: "Foundation Fixes"
-    status: pending
+    status: done
     items:
       1.9:
         name: "Fix pip install (template paths)"
-        status: pending
-        files: [pyproject.toml, src/bakec/engine.py, src/bakec/cli.py]
+        status: done
+        commit: 675799c
       1.1:
         name: "Activate JSON Schema validation"
-        status: pending
-        files: [src/bakec/parser.py, src/bakec/schema.py, tests/test_parser.py]
+        status: done
+        commit: 0cfda6d
       1.2:
         name: "Fail on unknown block types"
-        status: pending
-        files: [src/bakec/validator.py, templates/controller.c.j2, tests/test_validator.py]
+        status: done
+        commit: a25dc48
       1.11:
         name: "Clean up dead code"
-        status: pending
-        files: [src/bakec/schema.py, src/bakec/]
+        status: done
+        note: "No dead code remains — schema.py activated by 1.1"
   2:
     name: "Check Honesty"
     status: pending
