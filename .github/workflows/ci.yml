@@ -45,6 +45,12 @@ jobs:
           python -m bakec.cli validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
           python -m bakec.cli validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
 
+      - name: Compile and test generated C (desktop)
+        run: |
+          cmake -B build/out -S build -DPLATFORM=desktop
+          cmake --build build/out
+          ctest --test-dir build/out --output-on-failure
+
   build:
     name: Full pipeline (make all)
     runs-on: ubuntu-latest
