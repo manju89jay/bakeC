@@ -157,3 +157,27 @@ def test_lookup_table_missing_input_signal():
     model = _make_model(blocks=[block])
     errors = validate_model(model)
     assert any("input_signal" in e for e in errors)
+
+
+def test_unknown_block_type_rejected():
+    block = {
+        "type": "kalman_filter",
+        "name": "kf_test",
+        "params": {"A": [[1, 0], [0, 1]]},
+    }
+    model = _make_model(blocks=[block])
+    errors = validate_model(model)
+    assert len(errors) == 1
+    assert "unknown block type 'kalman_filter'" in errors[0]
+
+
+def test_multiple_unknown_block_types():
+    blocks = [
+        {"type": "magic", "name": "b1", "params": {}},
+        {"type": "neural_net", "name": "b2", "params": {}},
+    ]
+    model = _make_model(blocks=blocks)
+    errors = validate_model(model)
+    assert len(errors) == 2
+    assert "magic" in errors[0]
+    assert "neural_net" in errors[1]

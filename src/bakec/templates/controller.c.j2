@@ -45,6 +45,8 @@ static real_T {{ name }}_{{ s.name }} = {{ s.initial_value }}{{ type_suffix }};
 {% include "blocks/pid.c.j2" %}
 {% elif block.type == "lookup_table" %}
 {% include "blocks/lookup_table.c.j2" %}
+{% else %}
+#error "Unknown block type: {{ block.type }}"
 {% endif %}
 
 {% endfor %}
@@ -136,6 +138,8 @@ void {{ step_function }}(void)
     real_T {{ block.name }}_term = {{ block.params.coefficient }}{{ type_suffix }}
         * {{ name }}_{{ block.params.input_signal }};
 
+{% else %}
+#error "Unknown block type in step: {{ block.type }}"
 {% endif %}
 {% endfor %}
     /* --- Compute output --- */

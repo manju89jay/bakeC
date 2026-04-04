@@ -153,6 +153,11 @@ def validate_model(data: dict[str, Any]) -> list[str]:
             if "input_signal" not in params:
                 errors.append(f"block '{block_name}': missing required parameter 'input_signal'")
 
+        else:
+            errors.append(
+                f"block '{block_name}': unknown block type '{block_type}'"
+            )
+
     if errors:
         logger.warning("Validation found %d error(s)", len(errors))
     else:
