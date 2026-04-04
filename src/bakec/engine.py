@@ -22,19 +22,29 @@ logger = logging.getLogger("bakec")
 class CodegenEngine:
     """Template-based code generation engine."""
 
+    _DEFAULT_TEMPLATE_DIR = Path(__file__).parent / "templates"
+
     def __init__(
         self,
-        template_dir: Path,
         model: dict[str, Any],
         platform: dict[str, Any],
         model_path: str,
         platform_path: str,
+        template_dir: Path | None = None,
     ) -> None:
         """Initialize the engine.
 
         Sets up the Jinja2 environment and builds the template context.
         Use jinja2.StrictUndefined so missing variables cause errors.
         Use trim_blocks=True, lstrip_blocks=True for clean output.
+
+        Args:
+            model: Parsed model dict (from parse_model).
+            platform: Parsed platform dict (from parse_platform).
+            model_path: Path to the model YAML file (for traceability).
+            platform_path: Path to the platform YAML file (for traceability).
+            template_dir: Override template directory. Defaults to the
+                templates shipped inside the bakec package.
 
         The template context (self.context) must contain:
         - model: the model dict (from data["model"])
@@ -54,8 +64,9 @@ class CodegenEngine:
           platform_path, model_hash (first 16 chars of sha256),
           platform_hash (first 16 chars of sha256)
         """
+        resolved_dir = template_dir if template_dir is not None else self._DEFAULT_TEMPLATE_DIR
         self.env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(str(template_dir)),
+            loader=jinja2.FileSystemLoader(str(resolved_dir)),
             undefined=jinja2.StrictUndefined,
             trim_blocks=True,
             lstrip_blocks=True,

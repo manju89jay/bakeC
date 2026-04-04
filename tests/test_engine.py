@@ -10,7 +10,6 @@ def _create_engine(model_file="models/lung_mnarx.yaml",
     model = parse_model(Path(model_file))
     platform = parse_platform(Path(platform_file))
     return CodegenEngine(
-        template_dir=Path("templates"),
         model=model,
         platform=platform,
         model_path=model_file,

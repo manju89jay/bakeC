@@ -93,7 +93,6 @@ def _cmd_generate(args: argparse.Namespace) -> None:
 
     print("Generating code...")
     engine = CodegenEngine(
-        template_dir=Path("templates"),
         model=model_data,
         platform=platform_data,
         model_path=str(args.model),
