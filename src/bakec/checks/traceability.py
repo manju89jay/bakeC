@@ -4,12 +4,17 @@ Verifies provenance banners, @trace tags, version strings, and
 content hashes in generated C files.
 """
 
+import hashlib
 import re
 import logging
+from pathlib import Path
 
 from bakec.checks.runner import CheckResult
 
 logger = logging.getLogger("bakec")
+
+_MODEL_PATH_RE = re.compile(r'Model:\s+(\S+)\s+\[sha256:([a-f0-9]+)\]')
+_PLATFORM_PATH_RE = re.compile(r'Platform:\s+(\S+)\s+\[sha256:([a-f0-9]+)\]')
 
 
 def check_provenance_banner(content: str, filename: str) -> list[CheckResult]:
@@ -102,26 +107,81 @@ def check_version_string(content: str, filename: str) -> list[CheckResult]:
     return []
 
 
-def check_content_hash(content: str, filename: str) -> list[CheckResult]:
-    """TRACE-005: Must contain sha256: followed by at least 8 hex chars."""
+def check_content_hash(
+    content: str,
+    filename: str,
+    project_root: Path | None = None,
+) -> list[CheckResult]:
+    """TRACE-005: Verify sha256 hashes in the provenance banner.
+
+    If project_root is provided, extracts Model: and Platform: paths from
+    the banner, resolves them relative to project_root, recomputes the
+    sha256, and compares against the banner value. Falls back to
+    format-only check if source files are inaccessible.
+    """
+    results: list[CheckResult] = []
+
     if not re.search(r'sha256:[a-f0-9]{8,}', content):
-        return [CheckResult(
+        results.append(CheckResult(
             file=filename,
             line=1,
             severity="warning",
             check_id="TRACE-005",
             message="No valid sha256 hash found",
             suggestion="Include sha256 content hash in file banner",
-        )]
-    return []
+        ))
+        return results
+
+    if project_root is None:
+        return results
+
+    for pattern, label in [
+        (_MODEL_PATH_RE, "Model"),
+        (_PLATFORM_PATH_RE, "Platform"),
+    ]:
+        m = pattern.search(content)
+        if not m:
+            continue
+        source_path = project_root / m.group(1)
+        banner_hash = m.group(2)
+        if not source_path.is_file():
+            results.append(CheckResult(
+                file=filename,
+                line=1,
+                severity="info",
+                check_id="TRACE-005",
+                message=f"{label} source not found at {source_path} — hash not verified",
+            ))
+            continue
+        actual_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()[:len(banner_hash)]
+        if actual_hash != banner_hash:
+            results.append(CheckResult(
+                file=filename,
+                line=1,
+                severity="error",
+                check_id="TRACE-005",
+                message=(
+                    f"{label} hash mismatch: banner says {banner_hash}, "
+                    f"file computes {actual_hash}"
+                ),
+                suggestion=f"Regenerate file — {label.lower()} source has changed",
+            ))
+
+    return results
 
 
-def run_traceability_checks(content: str, filename: str) -> list[CheckResult]:
+def run_traceability_checks(
+    content: str,
+    filename: str,
+    project_root: Path | None = None,
+) -> list[CheckResult]:
     """Run all traceability checks on a single file.
 
     Args:
         content: File content string.
         filename: Filename for reporting.
+        project_root: Optional project root for resolving source file
+            paths and verifying sha256 hashes.
 
     Returns:
         List of CheckResult findings.
@@ -131,5 +191,5 @@ def run_traceability_checks(content: str, filename: str) -> list[CheckResult]:
     results.extend(check_trace_tags(content, filename))
     results.extend(check_do_not_edit(content, filename))
     results.extend(check_version_string(content, filename))
-    results.extend(check_content_hash(content, filename))
+    results.extend(check_content_hash(content, filename, project_root))
     return results

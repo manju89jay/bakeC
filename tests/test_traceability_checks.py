@@ -119,6 +119,39 @@ def test_content_hash_too_short():
     assert len(results) == 1
 
 
+def test_content_hash_verifies_correct(tmp_path):
+    """Hash verification passes when source file matches banner."""
+    import hashlib
+    model_file = tmp_path / "models" / "test.yaml"
+    model_file.parent.mkdir()
+    model_file.write_text("test content")
+    model_hash = hashlib.sha256(model_file.read_bytes()).hexdigest()[:16]
+    banner = f"Model: models/test.yaml [sha256:{model_hash}]\n"
+    results = check_content_hash(banner, "test.c", project_root=tmp_path)
+    assert all(r.severity != "error" for r in results)
+
+
+def test_content_hash_detects_mismatch(tmp_path):
+    """Hash verification fails when source file has changed."""
+    model_file = tmp_path / "models" / "test.yaml"
+    model_file.parent.mkdir()
+    model_file.write_text("original content")
+    banner = "Model: models/test.yaml [sha256:0000000000000000]\n"
+    results = check_content_hash(banner, "test.c", project_root=tmp_path)
+    errors = [r for r in results if r.severity == "error"]
+    assert len(errors) == 1
+    assert "mismatch" in errors[0].message
+
+
+def test_content_hash_graceful_missing_source(tmp_path):
+    """Falls back to info when source file doesn't exist."""
+    banner = "Model: models/gone.yaml [sha256:abcdef0123456789]\n"
+    results = check_content_hash(banner, "test.c", project_root=tmp_path)
+    infos = [r for r in results if r.severity == "info"]
+    assert len(infos) == 1
+    assert "not found" in infos[0].message
+
+
 # --- Orchestrator ---
 
 def test_run_traceability_all_pass():

@@ -59,6 +59,7 @@ def run_all_checks(
     baseline_dir: Path | None = None,
     rules: dict[str, Any] | None = None,
     platforms_dir: Path | None = None,
+    project_root: Path | None = None,
 ) -> CheckReport:
     """Run all enabled checks against target directory.
 
@@ -67,6 +68,8 @@ def run_all_checks(
         baseline_dir: Optional baseline directory for regression/API checks.
         rules: Optional rules dict. If None, all checks run with defaults.
         platforms_dir: Directory containing platform YAML files for constraint checks.
+        project_root: Optional project root for resolving source paths
+            in traceability hash verification.
 
     Returns:
         CheckReport with all findings.
@@ -101,7 +104,9 @@ def run_all_checks(
 
         trace_rules = rules.get("traceability", {})
         if trace_rules.get("enabled", True):
-            report.results.extend(run_traceability_checks(content, filename))
+            report.results.extend(
+                run_traceability_checks(content, filename, project_root)
+            )
 
         safety_rules = rules.get("safety", {})
         if safety_rules.get("enabled", True):

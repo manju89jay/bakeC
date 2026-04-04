@@ -136,7 +136,10 @@ def _cmd_validate(args: argparse.Namespace) -> None:
     platforms_dir = args.platforms_dir
 
     print("Running checks...")
-    report = run_all_checks(target_dir, baseline_dir, rules, platforms_dir)
+    report = run_all_checks(
+        target_dir, baseline_dir, rules, platforms_dir,
+        project_root=Path.cwd(),
+    )
     print()
 
     _print_report(report)
