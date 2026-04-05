@@ -153,7 +153,9 @@ def check_content_hash(
                 message=f"{label} source not found at {source_path} — hash not verified",
             ))
             continue
-        actual_hash = hashlib.sha256(source_path.read_bytes()).hexdigest()[:len(banner_hash)]
+        actual_hash = hashlib.sha256(
+            source_path.read_bytes().replace(b"\r\n", b"\n")
+        ).hexdigest()[:len(banner_hash)]
         if actual_hash != banner_hash:
             results.append(CheckResult(
                 file=filename,

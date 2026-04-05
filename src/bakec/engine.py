@@ -77,11 +77,13 @@ class CodegenEngine:
         name = model_data["name"]
 
         # Compute file hashes (first 16 chars of sha256)
+        # Normalize line endings to LF before hashing so the hash is
+        # identical on Windows (CRLF) and Linux (LF).
         model_hash = hashlib.sha256(
-            Path(model_path).read_bytes()
+            Path(model_path).read_bytes().replace(b"\r\n", b"\n")
         ).hexdigest()[:16]
         platform_hash = hashlib.sha256(
-            Path(platform_path).read_bytes()
+            Path(platform_path).read_bytes().replace(b"\r\n", b"\n")
         ).hexdigest()[:16]
 
         # Build block contexts with unroll flag
