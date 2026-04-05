@@ -17,20 +17,19 @@ cache:
 
 test:
   stage: test
-  image: python:3.12-slim
+  image: python:3.12
   before_script:
-    - apt-get update && apt-get install -y gcc cmake make git
-    - ln -sf /usr/local/bin/python /usr/local/bin/python3
+    - apt-get update && apt-get install -y gcc cmake make
     - pip install -e ".[dev]"
   script:
     # Python tests with coverage
-    - python -m pytest tests/ -v --tb=short --cov=bakec --cov-report=term-missing
+    - python3 -m pytest tests/ -v --tb=short --cov=bakec --cov-report=term-missing
 
     # Generate all 9 model x platform combos
     - |
       for model in lung_mnarx pid_controller lookup_table_1d; do
         for plat in desktop cortex_m4 aurix_tc397; do
-          python -m bakec.cli generate \
+          python3 -m bakec.cli generate \
             --model models/${model}.yaml \
             --platform platforms/${plat}.yaml \
             --output generated/${plat}/
@@ -41,9 +40,9 @@ test:
     - git diff --exit-code -I '^\s*\*\s*Date:' -I 'sha256:' generated/
 
     # Validate generated code
-    - python -m bakec.cli validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
-    - python -m bakec.cli validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
-    - python -m bakec.cli validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+    - python3 -m bakec.cli validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+    - python3 -m bakec.cli validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+    - python3 -m bakec.cli validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
 
     # Compile and run C tests (desktop)
     - cmake -B build/out -S build -DPLATFORM=desktop
@@ -52,27 +51,25 @@ test:
 
 build:
   stage: build
-  image: python:3.12-slim
+  image: python:3.12
   needs: [test]
   before_script:
-    - apt-get update && apt-get install -y gcc cmake make git
-    - ln -sf /usr/local/bin/python /usr/local/bin/python3
+    - apt-get update && apt-get install -y gcc cmake make
     - pip install -e ".[dev]"
   script:
     - make all
 
 cross-compile:
   stage: cross-compile
-  image: python:3.12-slim
+  image: python:3.12
   needs: [test]
   before_script:
-    - apt-get update && apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi cmake make git
-    - ln -sf /usr/local/bin/python /usr/local/bin/python3
+    - apt-get update && apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi cmake make
     - pip install -e ".[dev]"
   script:
     - |
       for model in lung_mnarx pid_controller lookup_table_1d; do
-        python -m bakec.cli generate \
+        python3 -m bakec.cli generate \
           --model models/${model}.yaml \
           --platform platforms/cortex_m4.yaml \
           --output generated/cortex_m4/
