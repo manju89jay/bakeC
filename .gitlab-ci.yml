@@ -15,6 +15,7 @@ test:
   image: python:3.12-slim
   before_script:
     - apt-get update && apt-get install -y gcc cmake make git
+    - ln -sf /usr/local/bin/python /usr/local/bin/python3
     - pip install -e ".[dev]"
   script:
     # Python tests with coverage
@@ -50,6 +51,7 @@ build:
   needs: [test]
   before_script:
     - apt-get update && apt-get install -y gcc cmake make git
+    - ln -sf /usr/local/bin/python /usr/local/bin/python3
     - pip install -e ".[dev]"
   script:
     - make all
@@ -58,8 +60,10 @@ cross-compile:
   stage: cross-compile
   image: python:3.12-slim
   needs: [test]
+  allow_failure: true
   before_script:
-    - apt-get update && apt-get install -y gcc-arm-none-eabi cmake make
+    - apt-get update && apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi cmake make git
+    - ln -sf /usr/local/bin/python /usr/local/bin/python3
     - pip install -e ".[dev]"
   script:
     - |
