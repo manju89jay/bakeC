@@ -8,6 +8,9 @@ Architecture (mirrors MATLAB Embedded Coder / TLC):
 
 import hashlib
 import logging
+import math
+import struct
+from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,6 +20,30 @@ import jinja2
 from bakec import __version__
 
 logger = logging.getLogger("bakec")
+
+
+def target_real(value: float, real_type: str) -> float:
+    """Round to the supported IEEE target type; reject loss of range."""
+    if real_type not in ("float", "double"):
+        raise ValueError(f"Unsupported real_T: {real_type}")
+    try:
+        number = float(value)
+        rounded = (struct.unpack("!f", struct.pack("!f", number))[0]
+                   if real_type == "float" else number)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(f"{value!r} is not representable as {real_type}") from exc
+    if not math.isfinite(rounded) or (value != 0 and rounded == 0):
+        raise ValueError(f"{value!r} is not representable as finite nonzero {real_type}")
+    return rounded
+
+
+def c_real_literal(value: float, real_type: str) -> str:
+    """Emit round-trip precision, including a decimal point or exponent."""
+    number = target_real(value, real_type)
+    text = format(number, ".9g") if real_type == "float" else repr(number)
+    if "." not in text and "e" not in text.lower():
+        text += ".0"
+    return text + ("f" if real_type == "float" else "")
 
 
 class CodegenEngine:
@@ -72,8 +99,15 @@ class CodegenEngine:
             lstrip_blocks=True,
         )
 
-        model_data = model["model"]
+        model_data = deepcopy(model["model"])
+        model_data.setdefault("state", [])
+        for state in model_data["state"]:
+            state.setdefault("initial_value", 0.0)
         platform_data = platform["platform"]
+        real_type = platform_data["types"]["real_T"]
+        self.env.filters["c_real"] = lambda value: c_real_literal(value, real_type)
+        # Validate even when a custom template omits the sample period.
+        target_real(model_data["sample_time_s"], real_type)
         name = model_data["name"]
 
         # Compute file hashes (first 16 chars of sha256)
@@ -88,8 +122,30 @@ class CodegenEngine:
 
         # Build block contexts with unroll flag
         blocks = []
+        pid_count = sum(b["type"] == "pid" for b in model_data.get("blocks", []))
+        states = {s["name"]: s for s in model_data["state"]}
         for block in model_data.get("blocks", []):
             block_ctx = dict(block)
+            if block["type"] == "pid":
+                for role in ("integral", "prev_error"):
+                    # Preserve the supplied single-PID model's state names.
+                    # Multiple PIDs use block-qualified state names.
+                    state_name = f"{block['name']}_{role}"
+                    if state_name not in states and pid_count == 1 and role in states:
+                        state_name = role
+                    if state_name not in states:
+                        states[state_name] = {"name": state_name, "initial_value": 0.0}
+                        model_data["state"].append(states[state_name])
+                    block_ctx[f"{role}_state"] = f"{name}_{state_name}"
+                params = block["params"]
+                if "output_min" in params and "output_max" in params:
+                    if target_real(params["output_min"], real_type) >= target_real(params["output_max"], real_type):
+                        raise ValueError(f"PID limits collapse in {real_type}: {block['name']}")
+            for key in ("knots", "breakpoints"):
+                if key in block.get("params", {}):
+                    values = [target_real(v, real_type) for v in block["params"][key]]
+                    if any(a >= b for a, b in zip(values, values[1:])):
+                        raise ValueError(f"{block['name']}: {key} must remain strictly increasing in {real_type}")
             if block["type"] == "basis_function_sum":
                 n = block["params"]["num_basis_functions"]
                 block_ctx["unroll"] = n <= 8
@@ -112,7 +168,7 @@ class CodegenEngine:
             "types_guard": f"{name_upper}_CONTROLLER_TYPES_H",
             "real_T": platform_data["types"]["real_T"],
             "int_T": platform_data["types"]["int_T"],
-            "type_suffix": platform_data.get("type_suffix", ""),
+            "type_suffix": "f" if real_type == "float" else "",
             "meta": {
                 "generator_version": __version__,
                 "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),

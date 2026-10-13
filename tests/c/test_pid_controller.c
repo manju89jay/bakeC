@@ -51,21 +51,22 @@ static void test_small_error_proportional(void)
     pid_pressure_U.setpoint = 1.0;
     pid_pressure_U.measured = 0.9;
 
-    /* Step once to set prev_error, then step again for clean derivative */
     pid_pressure_step();
-    pid_pressure_initialize();
-    pid_pressure_U.setpoint = 1.0;
-    pid_pressure_U.measured = 0.9;
-    pid_pressure_step();
+    ASSERT_NEAR(pid_pressure_Y.command, 10.25008, 1e-8,
+                "Small error includes first-step derivative and integral");
+}
 
-    /* error=0.1, Kp=2.5 -> p_term=0.25
-     * Total output is dominated by proportional for small first step */
-    if (pid_pressure_Y.command > 0.0) {
-        tests_passed++;
-    } else {
-        printf("FAIL: Small positive error should produce positive output, got %.6f\n",
-               pid_pressure_Y.command);
-        tests_failed++;
+static void test_repeated_initialization(void)
+{
+    for (int run = 0; run < 3; ++run) {
+        pid_pressure_initialize();
+        pid_pressure_U.setpoint = 1.0;
+        pid_pressure_step();
+        ASSERT_NEAR(pid_pressure_Y.command, 102.5008, 1e-8,
+                    "Initialize resets actual PID state");
+        pid_pressure_step();
+        ASSERT_NEAR(pid_pressure_Y.command, 2.5016, 1e-8,
+                    "Second step accumulates integral with zero derivative");
     }
 }
 
@@ -108,16 +109,9 @@ static void test_anti_windup(void)
         pid_pressure_step();
     }
 
-    /* With anti-windup, integral is bounded to [-1000, 1000], so output
-     * should be near Ki * integral_max = 0.8 * 1000 = 800 at most,
-     * and should decrease toward 0 with zero error */
-    if (pid_pressure_Y.command < 1000.0) {
-        tests_passed++;
-    } else {
-        printf("FAIL: Anti-windup should prevent output from staying at max, got %.6f\n",
-               pid_pressure_Y.command);
-        tests_failed++;
-    }
+    /* Integral clamps at 1000; with zero error and derivative, Ki * integral = 800. */
+    ASSERT_NEAR(pid_pressure_Y.command, 800.0, 1e-8,
+                "Anti-windup bounds the accumulated integral");
 }
 
 int main(void)
@@ -127,6 +121,7 @@ int main(void)
     test_init_zeroes_output();
     test_proportional_response();
     test_small_error_proportional();
+    test_repeated_initialization();
     test_output_saturation();
     test_anti_windup();
 

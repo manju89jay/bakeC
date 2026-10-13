@@ -3,7 +3,8 @@ platform:
   description: >
     Infineon AURIX TC397 (TriCore 1.6.2) for safety-critical
     hydraulic valve and industrial controller applications.
-    Single-precision FPU, SIL 2 / PLd rated.
+    Single-precision FPU. Safety and fieldbus fields below are descriptive
+    metadata, not implemented or verified capabilities of bakeC output.
 
   compiler: "tricore-elf-gcc"
   compiler_flags:
@@ -41,6 +42,7 @@ platform:
     ram_kb: 6144
     fpu: "single-precision"
 
+  # Context only: no certification, safety mechanism or fieldbus implementation.
   safety:
     sil: "SIL 2"
     performance_level: "PLd"

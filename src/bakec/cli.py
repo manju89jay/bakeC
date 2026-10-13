@@ -31,6 +31,10 @@ _SEVERITY_ICON = {
 
 def _print_report(report: CheckReport) -> None:
     """Print a human-readable validation report."""
+    print(f"  Files checked: {report.files_checked}")
+    print(f"  Executed categories: {', '.join(report.executed) or 'none'}")
+    for category, reason in report.skipped.items():
+        print(f"  Skipped {category}: {reason}")
     for r in report.results:
         icon = _SEVERITY_ICON.get(r.severity, "?")
         loc = f"{r.file}"
@@ -52,7 +56,7 @@ def _print_report(report: CheckReport) -> None:
     if parts:
         print(f"  {', '.join(parts)}")
     else:
-        print("  OK -- All checks passed")
+        print("  OK -- No findings from executed checks")
 
 
 def _cmd_generate(args: argparse.Namespace) -> None:
@@ -89,7 +93,7 @@ def _cmd_generate(args: argparse.Namespace) -> None:
             print(f"  {n} {block['name']} basis functions (M={n}, d={d})")
     sample_ms = model["sample_time_s"] * 1000
     sample_hz = 1.0 / model["sample_time_s"]
-    print(f"  Sample time: {sample_ms:.1f}ms ({sample_hz:.1f} Hz)\n")
+    print(f"  Sample time: {sample_ms:g}ms ({sample_hz:g} Hz)\n")
 
     print("Generating code...")
     engine = CodegenEngine(

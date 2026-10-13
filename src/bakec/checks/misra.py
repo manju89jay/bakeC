@@ -1,4 +1,4 @@
-"""MISRA C:2012 inspired code quality checks.
+"""Heuristic checks inspired by selected MISRA C:2012 rules.
 
 Regex-based approximations of a small MISRA C:2012 subset. These are NOT
 a substitute for a certified MISRA analyzer (cppcheck --addon=misra,
@@ -141,34 +141,6 @@ def check_explicit_return_type(content: str, filename: str) -> list[CheckResult]
                     check_id="MISRA-8.1",
                     message=f"Function '{name}' may be missing explicit return type",
                 ))
-    return results
-
-
-def check_implicit_type_conversion(content: str, filename: str) -> list[CheckResult]:
-    """MISRA-10.1: Flag obvious narrowing assignments without cast.
-
-    Regex approximation. Checks 3 hardcoded narrowing patterns only.
-    Limitation: misses narrowing through return values, function args,
-    casts, or types not in its pattern list.
-    """
-    results = []
-    stripped = _strip_comments(content)
-    # Look for int32_T = int16_T or similar narrowing patterns
-    narrow_patterns = [
-        (r'\bint16_T\s+\w+\s*=\s*\w*int32_T', "int32_T assigned to int16_T"),
-        (r'\bint8_T\s+\w+\s*=\s*\w*int16_T', "int16_T assigned to int8_T"),
-        (r'\bint8_T\s+\w+\s*=\s*\w*int32_T', "int32_T assigned to int8_T"),
-    ]
-    for pattern, msg in narrow_patterns:
-        for m in re.finditer(pattern, stripped):
-            results.append(CheckResult(
-                file=filename,
-                line=_find_line(stripped, m.start()),
-                severity="warning",
-                check_id="MISRA-10.1",
-                message=msg,
-                suggestion="Add explicit cast",
-            ))
     return results
 
 
@@ -395,7 +367,6 @@ def run_misra_checks(
         ("MISRA-21.3", lambda: check_no_dynamic_memory(content, filename)),
         ("MISRA-17.2", lambda: check_no_recursion(content, filename)),
         ("MISRA-8.1", lambda: check_explicit_return_type(content, filename)),
-        ("MISRA-10.1", lambda: check_implicit_type_conversion(content, filename)),
         ("MISRA-15.7", lambda: check_else_termination(content, filename)),
         ("MISRA-2.7", lambda: check_unused_parameters(content, filename)),
         ("MISRA-8.4", lambda: check_extern_has_definition(content, filename)),

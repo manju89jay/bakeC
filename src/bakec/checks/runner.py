@@ -29,6 +29,9 @@ class CheckReport:
     target_dir: str
     baseline_dir: str | None
     results: list[CheckResult] = field(default_factory=list)
+    executed: list[str] = field(default_factory=list)
+    skipped: dict[str, str] = field(default_factory=dict)
+    files_checked: int = 0
 
     @property
     def errors(self) -> int:
@@ -66,7 +69,7 @@ def run_all_checks(
     Args:
         target_dir: Directory containing generated .c and .h files.
         baseline_dir: Optional baseline directory for regression/API checks.
-        rules: Optional rules dict. If None, all checks run with defaults.
+        rules: Optional rules dict. Defaults enable all applicable checks.
         platforms_dir: Directory containing platform YAML files for constraint checks.
         project_root: Optional project root for resolving source paths
             in traceability hash verification.
@@ -89,10 +92,41 @@ def run_all_checks(
         baseline_dir=str(baseline_dir) if baseline_dir else None,
     )
 
+    if not target_dir.is_dir():
+        report.results.append(CheckResult(str(target_dir), None, "error", "VALIDATE-TARGET",
+                                          "Target must be an existing directory"))
+        return report
     c_h_files = sorted(
         p for p in target_dir.iterdir()
         if p.is_file() and p.suffix in (".c", ".h")
     )
+    if not c_h_files:
+        report.results.append(CheckResult(str(target_dir), None, "error", "VALIDATE-EMPTY",
+                                          "No relevant .c or .h files to validate"))
+        return report
+    if baseline_dir is not None:
+        if (not baseline_dir.is_dir()
+                or not any(p.is_file() and p.suffix in (".c", ".h")
+                           for p in baseline_dir.iterdir())):
+            report.results.append(CheckResult(str(baseline_dir), None, "error", "VALIDATE-BASELINE",
+                                              "Baseline must be a directory containing .c or .h files"))
+            return report
+        if baseline_dir.resolve() == target_dir.resolve():
+            report.results.append(CheckResult(str(baseline_dir), None, "error", "VALIDATE-BASELINE",
+                                              "Baseline must be independent of the target directory"))
+            return report
+
+    for category in ("misra", "traceability", "safety", "platform_constraints",
+                     "regression", "api_stability"):
+        if not rules.get(category, {}).get("enabled", True):
+            report.skipped[category] = "disabled by configuration"
+        elif category in ("regression", "api_stability") and baseline_dir is None:
+            report.skipped[category] = "no baseline supplied"
+        elif category == "platform_constraints" and platforms_dir is None:
+            report.skipped[category] = "no platforms directory supplied"
+        else:
+            report.executed.append(category)
+    report.files_checked = len(c_h_files)
 
     for filepath in c_h_files:
         content = filepath.read_text(encoding="utf-8")

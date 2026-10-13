@@ -35,4 +35,3 @@ model:
 
   constraints:
     no_dynamic_memory: true
-    misra_compliant: true

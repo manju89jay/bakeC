@@ -110,4 +110,4 @@ def test_full_pipeline_lookup_table_cortex_m4(tmp_path):
     types_content = (tmp_path / "temp_sensor_controller_types.h").read_text()
     assert "typedef float real_T" in types_content
     data = (tmp_path / "temp_sensor_controller_data.c").read_text()
-    assert "0.5000f" in data
+    assert "0.5f" in data

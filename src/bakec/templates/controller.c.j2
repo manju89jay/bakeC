@@ -33,7 +33,7 @@ extern const real_T {{ name }}_{{ block.name }}_td[];
 {{ name }}_ExtY_T {{ name }}_Y;
 
 {% for s in model.state %}
-static real_T {{ name }}_{{ s.name }} = {{ s.initial_value }}{{ type_suffix }};
+static real_T {{ name }}_{{ s.name }} = {{ s.initial_value | c_real }};
 {% endfor %}
 
 /* --- Block implementations --- */
@@ -67,13 +67,13 @@ void {{ init_function }}(void)
     {{ name }}_Y.{{ out.name }} = 0.0{{ type_suffix }};
 {% endfor %}
 {% for s in model.state %}
-    {{ name }}_{{ s.name }} = {{ s.initial_value }}{{ type_suffix }};
+    {{ name }}_{{ s.name }} = {{ s.initial_value | c_real }};
 {% endfor %}
 }
 
 /**
- * @brief Step function — called every {{ "%.1f" % (model.sample_time_s * 1000) }}ms
- *        ({{ "%.1f" % (1.0 / model.sample_time_s) }} Hz)
+ * @brief Step function — called every {{ model.sample_time_s * 1000 }}ms
+ *        ({{ 1.0 / model.sample_time_s }} Hz)
  *
  * @trace {{ meta.model_path }} → model (top-level)
  * @trace Inputs: {% for inp in model.inputs %}{{ inp.name }}{{ ", " if not loop.last }}{% endfor %}
@@ -121,7 +121,7 @@ void {{ step_function }}(void)
     real_T {{ block.name }}_output = {{ block.name }}_compute(
         {{ name }}_U.{{ model.inputs[0].name }},
         {{ name }}_U.{{ model.inputs[1].name }},
-        {{ "%.4f" % model.sample_time_s }}{{ type_suffix }}
+        {{ model.sample_time_s | c_real }}
     );
 
 {% elif block.type == "lookup_table" %}
@@ -137,7 +137,7 @@ void {{ step_function }}(void)
     /* --- Offset: {{ block.description }} ---
      * @trace {{ meta.model_path }} → blocks.{{ block.name }}
      */
-    real_T {{ block.name }}_term = {{ block.params.coefficient }}{{ type_suffix }}
+    real_T {{ block.name }}_term = {{ block.params.coefficient | c_real }}
         * {{ name }}_{{ block.params.input_signal }};
 
 {% else %}

@@ -9,44 +9,42 @@
  * @return          Controller output
  */
 
-static real_T {{ block.name }}_integral = 0.0{{ type_suffix }};
-static real_T {{ block.name }}_prev_error = 0.0{{ type_suffix }};
 
 static real_T {{ block.name }}_compute(real_T setpoint, real_T measured, real_T dt)
 {
     real_T error = setpoint - measured;
 
     /* Proportional */
-    real_T p_term = {{ "%.4f" % block.params.Kp }}{{ type_suffix }} * error;
+    real_T p_term = {{ block.params.Kp | c_real }} * error;
 
     /* Integral with anti-windup */
-    {{ block.name }}_integral += error * dt;
+    {{ block.integral_state }} += error * dt;
 {% if block.params.anti_windup | default(false) %}
-    if ({{ block.name }}_integral > {{ "%.1f" % block.params.output_max }}{{ type_suffix }}) {
-        {{ block.name }}_integral = {{ "%.1f" % block.params.output_max }}{{ type_suffix }};
-    } else if ({{ block.name }}_integral < {{ "%.1f" % block.params.output_min }}{{ type_suffix }}) {
-        {{ block.name }}_integral = {{ "%.1f" % block.params.output_min }}{{ type_suffix }};
+    if ({{ block.integral_state }} > {{ block.params.output_max | c_real }}) {
+        {{ block.integral_state }} = {{ block.params.output_max | c_real }};
+    } else if ({{ block.integral_state }} < {{ block.params.output_min | c_real }}) {
+        {{ block.integral_state }} = {{ block.params.output_min | c_real }};
     } else {
         /* within limits */
     }
 {% endif %}
-    real_T i_term = {{ "%.4f" % block.params.Ki }}{{ type_suffix }} * {{ block.name }}_integral;
+    real_T i_term = {{ block.params.Ki | c_real }} * {{ block.integral_state }};
 
     /* Derivative */
     real_T d_term = 0.0{{ type_suffix }};
     if (dt > 0.0{{ type_suffix }}) {
-        d_term = {{ "%.4f" % block.params.Kd }}{{ type_suffix }} * (error - {{ block.name }}_prev_error) / dt;
+        d_term = {{ block.params.Kd | c_real }} * (error - {{ block.prev_error_state }}) / dt;
     }
-    {{ block.name }}_prev_error = error;
+    {{ block.prev_error_state }} = error;
 
     /* Sum and saturate */
     real_T output = p_term + i_term + d_term;
 
 {% if block.params.output_max is defined %}
-    if (output > {{ "%.1f" % block.params.output_max }}{{ type_suffix }}) {
-        output = {{ "%.1f" % block.params.output_max }}{{ type_suffix }};
-    } else if (output < {{ "%.1f" % block.params.output_min }}{{ type_suffix }}) {
-        output = {{ "%.1f" % block.params.output_min }}{{ type_suffix }};
+    if (output > {{ block.params.output_max | c_real }}) {
+        output = {{ block.params.output_max | c_real }};
+    } else if (output < {{ block.params.output_min | c_real }}) {
+        output = {{ block.params.output_min | c_real }};
     } else {
         /* within limits */
     }

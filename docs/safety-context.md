@@ -1,59 +1,46 @@
 # Safety Standards Context
 
-bakeC generates code intended for safety-related embedded systems. The
-design decisions and validation checks align with requirements from
-several international safety standards.
+bakeC explores embedded code-generation patterns such as static allocation,
+lifecycle functions, calibration-data separation and source traceability. These
+patterns can be relevant to development under IEC 61508, IEC 62061, ISO 13849-1
+or ISO 26262. This project does not demonstrate compliance with those standards,
+qualified tooling, a safety integrity level, a performance level or suitability
+for medical-device control.
 
-## Applicable Standards
+## Configuration is not safety evidence
 
-### IEC 61508 — Functional Safety of E/E/PE Systems
-The foundational standard for safety-critical electronic systems.
-bakeC addresses several IEC 61508 Part 3 (software) recommendations:
-- **Static allocation** (Table B.1) — no dynamic memory, bounded stack.
-- **Traceability** (Clause 7.4.4) — every generated function traces to
-  its model source via `@trace` tags.
-- **Coding standards** (Table B.1) — MISRA C:2012 subset enforcement.
-- **Defensive programming** (Table B.1) — assertions, bounded loops,
-  no recursion.
+The AURIX configuration includes SIL 2/PLd, watchdog, safe-state, EtherCAT and
+memory-budget metadata. These fields do not implement watchdog handling,
+fieldbus communication, safe-state transitions or resource-budget enforcement.
+Likewise, a `SIL2_SAFETY` compile definition does not provide a safety mechanism.
+The pipeline does not demonstrate AURIX compilation or hardware execution.
 
-### IEC 62061 — Safety of Machinery
-Sector-specific application of IEC 61508 for machinery control systems.
-The lung ventilator controller modeled in bakeC falls under this scope.
-Key requirements addressed:
-- Deterministic execution timing (static allocation, no recursion).
-- Separation of calibration data from algorithm code.
+Static allocation does not establish worst-case execution time or bounded stack
+usage. Those properties require target-specific analysis and measurement. Desktop
+execution and Cortex-M4 cross-compilation provide narrower, distinct evidence.
 
-### ISO 13849-1 — Safety-Related Parts of Control Systems
-Complements IEC 62061 with a simpler category-based approach. bakeC's
-generated code supports Category 2-4 architectures by providing:
-- Reproducible, verifiable code generation from declared models.
-- Regression detection for unintended changes between versions.
-- API stability checks to prevent breaking interface contracts.
+## MISRA-inspired heuristics
 
-### MISRA C:2012
-The de facto C coding standard for safety-critical embedded systems.
-bakeC enforces a subset of MISRA C:2012 rules through text-based
-static analysis:
-- **Rule 21.3** — No dynamic memory allocation (error)
-- **Rule 17.2** — No recursion (error)
-- **Rule 8.1** — Explicit return types (warning)
-- **Rule 10.1** — No implicit narrowing conversions (warning)
-- **Rule 15.7** — if/else-if chains terminated with else (warning)
-- **Rule 21.6** — No stdio in production code (warning)
+bakeC provides **heuristic checks inspired by selected MISRA C:2012 rules**.
+Nine text-pattern checks look for selected allocation calls, direct recursion,
+missing return types, else-chain termination, unused parameters, extern declarations,
+loop-variable modification, stdio calls and potentially const pointer parameters.
 
-## Validation Pipeline
+These are incomplete approximations, with false positives and false negatives.
+They do not establish MISRA compliance or complete coverage of the referenced
+rules. Narrowing-conversion analysis is unsupported: the earlier heuristic based
+on variable spelling has been removed. See the individual docstrings in
+`src/bakec/checks/misra.py` for limitations.
 
-The `bakec validate` command enforces these safety properties on every
-generated output:
+## Verification evidence
 
-| Check Category    | Checks | Scope               |
-|-------------------|--------|---------------------|
-| MISRA C:2012      | 10     | Per-file analysis   |
-| Traceability      | 5      | Per-file analysis   |
-| Safety patterns   | 6      | Per-file analysis   |
-| Regression        | 9      | Baseline comparison |
-| API stability     | 6      | Baseline comparison |
+`bakec validate` reports findings from applicable categories and identifies skipped
+categories. Regression and API-stability comparisons require an independent valid
+baseline; platform constraints require platform configuration. Empty targets and
+invalid explicit baselines fail. A clean report is not a safety assessment.
 
-Running validation as part of the build pipeline (via `make validate`)
-ensures that safety properties are continuously verified, not just at
-release time.
+The development pipeline also compiles and executes desktop C tests and generated-C
+numerical regressions. These tests exercise selected behavior; they do not prove
+correctness for all models, inputs, compilers or hardware. Source hashes establish
+provenance, not functional equivalence. Deployment needs its own requirements,
+verification and safety process.

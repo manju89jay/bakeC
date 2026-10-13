@@ -4,7 +4,6 @@ from bakec.checks.misra import (
     check_no_dynamic_memory,
     check_no_recursion,
     check_explicit_return_type,
-    check_implicit_type_conversion,
     check_else_termination,
     check_unused_parameters,
     check_extern_has_definition,
@@ -65,18 +64,16 @@ def test_explicit_return_type_missing():
     assert results[0].check_id == "MISRA-8.1"
 
 
-# --- MISRA-10.1: Implicit type conversion ---
+# Narrowing analysis is unsupported: never infer types from identifier spelling.
 
-def test_implicit_conversion_clean():
-    code = "int32_T x = (int32_T)some_value;"
-    assert check_implicit_type_conversion(code, "test.c") == []
+def test_narrowing_not_claimed_as_supported():
+    code = "int32_T source = 100000;\nint16_T destination = source;"
+    assert all(r.check_id != "MISRA-10.1" for r in run_misra_checks(code, "test.c"))
 
 
-def test_implicit_conversion_narrowing():
-    code = "int16_T x = some_int32_T;"
-    results = check_implicit_type_conversion(code, "test.c")
-    assert len(results) == 1
-    assert results[0].check_id == "MISRA-10.1"
+def test_type_name_in_identifier_does_not_report_conversion():
+    code = "int16_T some_int32_T = 1;\nint16_T destination = some_int32_T;"
+    assert run_misra_checks(code, "test.c") == []
 
 
 # --- MISRA-15.7: else termination ---
