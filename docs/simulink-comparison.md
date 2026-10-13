@@ -1,12 +1,12 @@
 # bakeC vs MATLAB Simulink Embedded Coder
 
-If you've used Embedded Coder, every concept in bakeC will look familiar. Same architecture, same separation of concerns, same output structure. The difference is that bakeC's entire pipeline fits in your head — and in a single git repo you can actually read.
+bakeC explores selected patterns also used by MATLAB Embedded Coder. The mappings below explain design inspiration; they do not imply feature equivalence, identical semantics or equivalent verification.
 
 ---
 
 ## Architecture mapping
 
-The one-to-one correspondence, laid out so there's no ambiguity:
+Selected conceptual parallels:
 
 | Simulink Embedded Coder | bakeC | Purpose |
 |---|---|---|
@@ -21,7 +21,7 @@ The one-to-one correspondence, laid out so there's no ambiguity:
 
 ## Type system
 
-Both systems use `real_T` to decouple the model from hardware precision. Write the algorithm once, deploy it on single- or double-precision targets without changing a line. Same idea, same typedef names, same reason.
+Both systems use `real_T` to decouple the model from hardware precision. The platform configuration selects single or double precision. Numerical behavior needs verification for each target.
 
 | Platform | EC `real_T` | bakeC `real_T` |
 |---|---|---|
@@ -40,22 +40,22 @@ The generated `*_controller_types.h` contains `typedef double real_T;` or `typed
 | Lookup Table (1-D) | `lookup_table` | Linear interpolation, clamped extrapolation |
 | PID Controller | `pid` | Proportional + Integral + Derivative with output saturation |
 | MATLAB Function (basis) | `basis_function_sum` | B-spline basis function sum (order 0/1) |
-| Constant + Gain | `offset` | Simple coefficient * input + offset |
+| Constant + Gain | `offset` | Scalar coefficient times a named model state |
 
 ### Unrolling
 
-Both EC and bakeC decide at generation time whether to unroll or loop. Small N gets straight-line code with zero branch overhead. Large N gets a compact loop that doesn't blow up the instruction cache.
+bakeC selects unrolled or loop-based code at generation time. Actual performance depends on the compiler and target.
 
 - **EC**: configurable via "Loop unrolling threshold" in code generation settings
 - **bakeC**: N <= 8 unrolls, N > 8 generates a `for` loop (applies to `basis_function_sum` coefficients and `lookup_table` breakpoints)
 
-The threshold is hardcoded at 8. Opinions were had.
+The threshold is currently fixed at 8.
 
 ---
 
 ## Pipeline comparison
 
-Eight steps. Same order in both systems. Different tools, same job.
+A comparison of broad development stages:
 
 | Step | Embedded Coder | bakeC |
 |---|---|---|
@@ -74,13 +74,13 @@ Eight steps. Same order in both systems. Different tools, same job.
 
 EC generates `/* Block: '<Root>/PID'` comments linking code back to model blocks. bakeC does the same thing with `@trace` doc-comment tags pointing back to the model YAML path, plus a file banner with model path, platform path, generator version, and SHA-256 content hash.
 
-An auditor can verify that generated code matches a specific model version by checking the embedded hashes. No proprietary viewer required. No "please contact your MathWorks representative".
+Embedded hashes identify the source version. Behavioral equivalence requires additional verification.
 
 ---
 
 ## What bakeC does NOT implement
 
-These are deliberate scope boundaries, not a roadmap. bakeC reimplements the core code generation pipeline, not the entire MathWorks ecosystem.
+bakeC implements a focused personal code-generation pipeline. Its scope excludes:
 
 - **Graphical modeling** — no block diagram editor; models are hand-written YAML
 - **Stateflow** — no state machine / chart support
@@ -95,4 +95,4 @@ These are deliberate scope boundaries, not a roadmap. bakeC reimplements the cor
 - **AUTOSAR / ASAM** — no AUTOSAR-compliant interface generation
 - **Custom Storage Classes** — all data is statically allocated with a fixed layout
 
-Twelve things Embedded Coder does that bakeC doesn't. On the other hand, bakeC has a readable codebase, a `git log`, and no license dongle.
+The project focuses on readable generated C and testing the supported patterns.

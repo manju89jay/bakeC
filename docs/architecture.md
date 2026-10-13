@@ -1,7 +1,7 @@
 # Architecture
 
-bakeC mirrors the MATLAB Embedded Coder pipeline — YAML models in, validated
-embedded C out — with a two-pipeline architecture: **Generate** (model to code)
+bakeC explores selected embedded code-generation patterns — YAML models in,
+C source out — with a two-pipeline architecture: **Generate** (model to code)
 and **Validate** (code to evidence).
 
 ## System Context (C4 Level 1)
@@ -66,7 +66,7 @@ block-level fragments in `templates/blocks/`. The Writer emits files to disk.
 
 ```
   generated/*.c, *.h ──► File Reader ──► Per-file checks:
-                              │            ├─ MISRA C:2012 (10 rules)
+                              │            ├─ MISRA-inspired (9 heuristics)
                               │            ├─ Traceability (5 checks)
                               │            └─ Safety patterns (6 checks)
                               │
@@ -76,13 +76,16 @@ block-level fragments in `templates/blocks/`. The Writer emits files to disk.
                               │
                               ▼
                          CheckReport
-                         (errors, warnings, info)
+                         (findings, executed/skipped categories)
 ```
 
 The validate pipeline operates on generated C files, not on YAML models. Each
 check module is a pure function: `(content, filename) -> list[CheckResult]`.
 Regression and API stability checks compare two directories (target vs
-baseline) to detect unintended structural changes.
+baseline) to detect selected structural changes. Without a baseline, both
+categories are reported as skipped. An empty target or invalid explicit baseline
+fails. Platform constraint checks additionally require platform configuration.
+These text-based checks do not establish semantic correctness or compliance.
 
 **Key files:**
 [runner.py](../src/bakec/checks/runner.py),

@@ -2,6 +2,8 @@
 
 PYTHON := python3
 GENERATOR := $(PYTHON) -m bakec.cli
+# Optional independent baseline tree with desktop/, cortex_m4/, aurix_tc397/.
+BASELINE_DIR ?=
 
 all: generate build test validate
 
@@ -46,13 +48,13 @@ test: test-python test-c
 test-python:
 	$(PYTHON) -m pytest tests/ -v --tb=short --cov=bakec --cov-report=term-missing
 
-test-c:
-	@if [ -d "build/out" ]; then ctest --test-dir build/out --output-on-failure; fi
+test-c: build
+	ctest --test-dir build/out --output-on-failure --no-tests=error
 
 validate:
-	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
-	$(GENERATOR) validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
-	$(GENERATOR) validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+	$(GENERATOR) validate --target generated/desktop/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/ $(if $(BASELINE_DIR),--baseline $(BASELINE_DIR)/desktop/)
+	$(GENERATOR) validate --target generated/cortex_m4/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/ $(if $(BASELINE_DIR),--baseline $(BASELINE_DIR)/cortex_m4/)
+	$(GENERATOR) validate --target generated/aurix_tc397/ --rules src/bakec/checks/rules.yaml --platforms-dir platforms/ $(if $(BASELINE_DIR),--baseline $(BASELINE_DIR)/aurix_tc397/)
 
 clean:
 	rm -rf build/out generated/desktop generated/cortex_m4 generated/aurix_tc397 __pycache__

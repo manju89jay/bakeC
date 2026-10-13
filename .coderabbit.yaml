@@ -22,7 +22,7 @@ reviews:
     - path: "templates/**"
       instructions: >
         Jinja2 templates that produce C code. Verify generated output will be
-        MISRA-compliant, use platform typedefs (real_T, int_T), and include
+        reviewed for selected MISRA-inspired patterns, use platform typedefs (real_T, int_T), and include
         traceability tags.
 
     - path: "tests/**"

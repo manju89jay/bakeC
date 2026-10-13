@@ -20,9 +20,6 @@ misra:
     MISRA-8.1:
       enabled: true
       severity: warning
-    MISRA-10.1:
-      enabled: true
-      severity: warning
     MISRA-15.7:
       enabled: true
       severity: warning

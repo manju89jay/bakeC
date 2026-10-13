@@ -6,182 +6,179 @@
 
 > **Raw YAML in. Baked C out.**
 
-MATLAB Embedded Coder costs somewhere between "a lot" and "why does this exist". bakeC doesn't.
+bakeC is a personal Python code generator exploring selected embedded
+code-generation patterns. It turns YAML models and platform configurations into
+readable C, with `initialize`/`step`/`terminate` lifecycle functions, separate
+calibration arrays, and model-to-code traceability.
 
-It does the same job — YAML model in, production-quality embedded C out — for free, in the open, and without a license server. `init`/`step`/`terminate` lifecycle, MISRA C:2012 compliance, Cortex-M4 and AURIX targets, full traceability. The whole pipeline, reimplemented from scratch so it's no longer a black box.
+The project separates parsing, model validation and template rendering. It is
+inspired by patterns used in embedded code-generation tools, including MATLAB
+Embedded Coder; it is not a reimplementation of that product or a drop-in replacement.
 
-Is it a drop-in replacement for Embedded Coder? No. Is it a complete, documented, tested reimplementation that proves the toolchain isn't magic? Yes.
+## Generated output
 
----
+Each model produces four files:
 
-## What it actually does
-
-You give bakeC a YAML model and a platform config. It gives you four C files per model:
-
-| File | What's in it |
+| File | Contents |
 |---|---|
-| `{name}_controller.h` | Public API: I/O structs, lifecycle prototypes |
-| `{name}_controller.c` | The algorithm: init/step/terminate |
-| `{name}_controller_data.c` | Calibration data (swap it without touching the algorithm) |
+| `{name}_controller.h` | Public I/O structs and lifecycle prototypes |
+| `{name}_controller.c` | Algorithm and lifecycle implementation |
+| `{name}_controller_data.c` | Calibration arrays for basis functions and lookup tables |
 | `{name}_controller_types.h` | Platform-specific typedefs |
 
-Then it runs 36 automated checks against the output — MISRA, traceability, safety patterns, regression, API stability — and tells you if anything is wrong. All without a compiler.
-
-```
-$ python -m bakec.cli validate --target generated/desktop/
-
-bakeC v0.1.0
-
-Target:    generated/desktop/
-
-Running checks...
-
-  OK -- All checks passed
-```
-
-Every design decision maps directly to its Embedded Coder equivalent. The struct-based I/O pattern, the init/step/terminate lifecycle, the calibration data split — it's all documented in the [TLC mapping](docs/tlc-mapping.md) and [automotive mapping](docs/automotive-mapping.md). No magic, no vendor lock-in, no five-figure invoice.
-
----
-
-## Prerequisites
-
-- Python 3.10+
-
-Want to actually compile the generated C (optional but satisfying)?
-
-- **Linux/macOS:** GCC and CMake (almost certainly already installed)
-- **Windows:** [MSYS2](https://www.msys2.org/) with MinGW-w64 — `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake`
-
-Cross-compilation toolchains (ARM, AURIX) are intentionally not required. More on that below.
-
----
+PID gains and scalar offsets currently remain in the algorithm file. Traceability
+comments record source paths, SHA-256 hashes, generator version and block references.
+They identify inputs; they do not prove that generated behavior is correct.
 
 ## Quick start
+
+Requires Python 3.10+, a C99 compiler (`cc` or GCC), CMake 3.16+ and Make.
+The Python suite includes tests that compile and execute generated C, so a C
+compiler is required for the full suite. On Windows, MSYS2 with MinGW-w64 can
+provide the build tools.
 
 ```bash
 git clone https://github.com/manju89jay/bakeC.git
 cd bakeC
-pip install -e ".[dev]"    # bakec + pytest + coverage
-make all                    # generate → compile → test → validate
+pip install -e ".[dev]"
+make all
 ```
 
-`make all` runs the full pipeline: generates C for all 9 model x platform combinations, compiles the desktop target with GCC, runs 172 Python tests + 3 C executables, and validates against all 36 checks.
+`make all` generates all nine supplied model/platform combinations, builds and
+executes three desktop C test programs, runs the Python suite (including generated-C
+behavior tests and golden-file comparisons), and runs configured validation checks.
+Regression and API-stability validation categories are **skipped without a baseline**;
+the CLI reports those skips. Golden-file tests are a separate comparison against
+committed generated files.
 
-No GCC? The Python-only commands still work:
+Generation and text-based validation can also run without a compiler:
 
 ```bash
-# Generate C for one model + platform
-python -m bakec.cli generate \
-  --model models/lung_mnarx.yaml \
-  --platform platforms/desktop.yaml \
-  --output generated/desktop/
-
-# Validate (no compiler needed)
-python -m bakec.cli validate --target generated/desktop/
-
-# Run the Python test suite
-python -m pytest tests/ -v
+python -m bakec.cli generate --model models/lung_mnarx.yaml \
+  --platform platforms/desktop.yaml --output generated/desktop/
+python -m bakec.cli validate --target generated/desktop/ \
+  --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
 ```
 
----
+## Models and numerical behavior
+
+- **mNARX Lung** — a nonlinear autoregressive lung-mechanics example with
+  pressure-dependent basis functions, based on
+  [Jayaramaiah et al. (2016)](https://www.scirp.org/journal/paperinformation?paperid=70763).
+  See [model background](docs/model_background.md).
+- **PID Controller** — proportional, integral and derivative terms with optional
+  output saturation and integral clamping. Initialization resets the state used
+  by computation, including configured initial values.
+- **Lookup Table 1D** — piecewise linear interpolation with clamped extrapolation.
+
+Real-valued model parameters use centralized C literal formatting: round-trip
+precision for IEEE binary32 (`float`) and binary64 (`double`). Generation rejects
+non-finite values, overflow, nonzero values that round to zero, and knots,
+breakpoints or PID limits that collapse after conversion to target precision.
+Ordinary rounding still occurs; runtime arithmetic can overflow or lose precision
+and must be tested for the intended input range.
+
+Compiled-C regression tests cover PID reset and initial state, small sample periods
+and gains, fractional saturation limits, small coefficients and lookup boundaries.
+Both `float` and `double` configurations are executed on the host. These checks do
+not establish identical behavior on every embedded target. The older handwritten
+Python precision comparisons remain useful numerical experiments, not evidence
+about generated C execution.
 
 ## Architecture
 
-Two command paths. No surprises.
+**Generate:** YAML → parser/schema validation → semantic validation → Jinja2 engine → C files
 
-**Generate:** YAML model + platform → Parser → Validator → Jinja2 engine → C files
+**Validate:** C files + optional baseline → configured heuristic checks → findings and execution status
 
-**Validate:** C files [+ baseline] → MISRA + traceability + safety + regression checks → report
-
-```
+```text
 src/bakec/
-  parser.py          YAML → Python dict  (the .rtw equivalent, without the mystery)
-  validator.py       Semantic checks on model IR
-  engine.py          Jinja2 template rendering  (TLC, but readable)
-  writer.py          File output with metadata
-  cli.py             generate and validate subcommands
-  checks/
-    runner.py        Check orchestrator
-    misra.py         10 MISRA C:2012 rules
-    traceability.py  5 provenance/trace checks
-    safety.py        6 embedded safety patterns
-    regression.py    9 structural comparison checks
-    api_stability.py 6 API contract checks
-    rules.yaml       Check configuration
+  parser.py          YAML and JSON Schema validation
+  validator.py       Semantic model checks
+  engine.py          Template context, state binding and C literal formatting
+  templates/         File templates and block implementations
+  writer.py          Generated file output
+  cli.py             Generate and validate commands
+  checks/            Configurable validation categories
 ```
 
-Full system design with C4 diagrams in [docs/architecture.md](docs/architecture.md).
+See [architecture](docs/architecture.md), [TLC mapping](docs/tlc-mapping.md) and
+[automotive mapping](docs/automotive-mapping.md) for design parallels and scope.
 
----
+## Target verification
 
-## Models
-
-- **mNARX Lung** (`models/lung_mnarx.yaml`) — Modified nonlinear autoregressive lung mechanics model with pressure-dependent B-spline basis functions. Based on [Jayaramaiah et al. (2016)](https://www.scirp.org/journal/paperinformation?paperid=70763), developed during the author's master thesis. Not your average blinky LED. See [model background](docs/model_background.md).
-
-- **PID Controller** (`models/pid_controller.yaml`) — PID pressure controller for hydraulic valve systems. The one everyone knows but few people generate correctly under MISRA.
-
-- **Lookup Table 1D** (`models/lookup_table_1d.yaml`) — Thermistor NTC temperature sensor with 8-breakpoint piecewise linear interpolation and clamped extrapolation. The kind of thing that lives in every engine management unit on the planet.
-
----
-
-## Platforms
-
-Three targets. Two of them you can't compile locally, and that's fine — that's how production embedded CI actually works.
-
-| Platform | Compiler | Precision | Notes |
-|---|---|---|---|
-| **Desktop** | GCC | `double` | Assertions on, `-O2`, compiles locally |
-| **ARM Cortex-M4** | `arm-none-eabi-gcc` | `float` | `-Os`, cross-compiled in CI |
-| **AURIX TC397** | `tricore-elf-gcc` | `float` | SIL 2 / PLd, EtherCAT, `-Os` |
-
-Cross-compilation targets are generated and validated in CI but not compiled locally — cross-compilers aren't required. The generated C is correct regardless; your target build system handles compilation. This is industry-standard practice, not a limitation.
-
----
-
-## Validation checks
-
-36 checks. Zero hand-waving.
-
-| Category | Count | What it's checking |
+| Configuration | Precision | Demonstrated verification path |
 |---|---|---|
-| MISRA C:2012 | 10 | Per-file static analysis |
-| Traceability | 5 | Provenance, `@trace` tags, hashes |
-| Safety | 6 | Static allocation, bounded loops, typed vars |
-| Regression | 9 | Structural comparison against baseline |
-| API stability | 6 | Header contract verification |
+| Desktop | `double` | Compiled and executed with host C tests |
+| Cortex-M4 | `float` | Cross-compilation with `arm-none-eabi-gcc` in GitHub CI; no hardware execution shown |
+| AURIX TC397 | `float` | Generation/configuration support; the pipeline does not demonstrate target compilation or hardware execution |
 
-Run them independently at any time with `python -m bakec.cli validate --target <dir>`.
+SIL 2/PLd, EtherCAT, watchdog, memory-budget and related platform metadata describe
+configuration context. They do not establish implemented fieldbus or safety
+functionality, certification, timing guarantees, enforced resource budgets or
+verified deployment. See [safety context](docs/safety-context.md).
 
----
+## Validation scope
+
+The MISRA-related functionality consists of **heuristic checks inspired by selected
+MISRA C:2012 rules**. Nine text-pattern checks are available; they do not cover
+those rules completely and do not establish MISRA compliance. The former narrowing
+heuristic was removed because it inferred types from variable names. Narrowing
+conversions and other semantic type analysis require a C analyser.
+
+| Category | Scope / prerequisite |
+|---|---|
+| MISRA-inspired | Nine heuristic checks; individual checks can be disabled |
+| Traceability | Provenance banners, trace tags and source hashes |
+| Safety patterns | Selected text patterns such as allocation calls and loop forms |
+| Platform constraints | Requires `--platforms-dir`; checks available platform declarations |
+| Regression | Requires an independent baseline directory |
+| API stability | Requires an independent baseline directory; compares header contracts |
+
+Validation fails on an empty target or an explicitly invalid baseline. Reports list
+executed categories and skipped categories with reasons. A clean report means no
+findings from the executed checks, not proof of correctness or safety. Compile and
+execute generated code as part of verification.
+
+To compare with a retained earlier output, provide its directory explicitly:
+
+```bash
+python -m bakec.cli validate --target generated/desktop/ \
+  --baseline /path/to/earlier-output/desktop/ \
+  --rules src/bakec/checks/rules.yaml --platforms-dir platforms/
+# Or compare all platforms using a tree containing their respective subdirectories:
+make validate BASELINE_DIR=/path/to/earlier-output
+```
+
+Do not use the target directory itself as its baseline. Keep a separately reviewed
+output version for meaningful comparisons.
 
 ## Development
 
-All the Makefile targets, documented honestly:
+| Target | Behavior |
+|---|---|
+| `make install` | Install package and development dependencies |
+| `make generate` | Generate all nine model/platform combinations |
+| `make build` | Compile desktop libraries and C tests |
+| `make test` | Run Python tests, build desktop output and execute C tests |
+| `make validate` | Run applicable checks; baseline comparisons are optional |
+| `make all` | Generate, build, test and validate |
 
-| Target | What it does | Needs |
-|---|---|---|
-| `make install` | Install bakec + dev deps | Python |
-| `make generate` | Generate C for all 9 combos | Python |
-| `make validate` | Run all 36 checks | Python |
-| `make test` | Python tests (172) + C tests (3) | Python + GCC |
-| `make build` | Compile desktop target | GCC + CMake |
-| `make all` | Everything, in order | Python + GCC + CMake |
-
----
+After changing generation logic, regenerate committed outputs and verify numerical
+behavior as well as golden files. Test counts and coverage do not replace behavioral
+assertions.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — C4 diagrams, system design
-- [TLC Mapping](docs/tlc-mapping.md) — what each Jinja2 template replaces in TLC
-- [Automotive Mapping](docs/automotive-mapping.md) — AUTOSAR concept parallels
-- [Simulink Comparison](docs/simulink-comparison.md) — Embedded Coder feature mapping
-- [Safety Context](docs/safety-context.md) — IEC 61508, ISO 13849-1, MISRA rationale
-- [Model Background](docs/model_background.md) — the mNARX lung mechanics model
-- [Architecture Decision Records](docs/decisions/) — 6 ADRs explaining the non-obvious choices
-- [Adding a Model](docs/adding-a-model.md) — step-by-step guide
-
----
+- [Architecture](docs/architecture.md)
+- [TLC Mapping](docs/tlc-mapping.md)
+- [Automotive Mapping](docs/automotive-mapping.md)
+- [Embedded Coder concept comparison](docs/simulink-comparison.md)
+- [Safety Context](docs/safety-context.md)
+- [Model Background](docs/model_background.md)
+- [Architecture Decision Records](docs/decisions/)
+- [Adding a Model](docs/adding-a-model.md)
 
 ## License
 
-MIT. Use it, fork it, embed it in something that actually ships to hardware.
+MIT.

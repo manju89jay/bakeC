@@ -20,6 +20,10 @@ model:
       description: "Desired value"
       unit: "bar"
       data_type: "real_T"
+    - name: "measured"
+      description: "Measured pressure"
+      unit: "bar"
+      data_type: "real_T"
 
   outputs:
     - name: "command"
@@ -28,7 +32,7 @@ model:
       data_type: "real_T"
 
   state:                   # optional, for stateful blocks
-    - name: "accumulator"
+    - name: "integral"
       description: "Internal state"
       data_type: "real_T"
       initial_value: 0.0
@@ -46,11 +50,16 @@ model:
 
   constraints:
     no_dynamic_memory: true
-    misra_compliant: true
 ```
 
-**Required fields:** `name`, `description`, `sample_time_s`, `inputs`, `outputs`, `blocks`.
-**Optional fields:** `state`, `constraints`.
+**Required fields:** `name`, `sample_time_s`, `inputs`, `outputs`, `blocks`.
+**Optional fields:** `description`, `state`, `constraints`. Missing state is
+normalized to an empty collection; omitted initial values default to zero.
+PID inputs are ordered: setpoint first, measured value second. A single PID
+uses declared `integral` and `prev_error` states, or block-qualified names
+(e.g. `controller_integral`) when supplied. Undeclared PID states are created
+with zero initial values. Multiple PID blocks use block-qualified names to
+keep their state independent. Initialization restores all those initial values.
 
 ### Supported block types
 
@@ -67,7 +76,7 @@ If your model uses a new block type not listed above:
 1. Create `templates/blocks/<type>.c.j2`
 2. The template receives `block` (name, params) and `meta` (traceability) context
 3. It should define a `static` compute function
-4. Use `{{ type_suffix }}` after float literals for platform portability
+4. Use `{{ value | c_real }}` for model-derived real literals; never fixed decimal formatting
 5. Use `real_T` / `int32_T` types, never raw `float` / `int`
 6. Include `@trace` tags linking back to the model
 
@@ -98,7 +107,9 @@ python -m bakec.cli validate \
   --rules src/bakec/checks/rules.yaml
 ```
 
-Fix any MISRA, traceability, or safety warnings before proceeding.
+Review heuristic findings and compile and test the generated behavior.
+Baseline comparisons require `--baseline` pointing to an independent prior
+output directory; without it, regression and API-stability checks are skipped.
 
 ## 5. Add Tests
 
